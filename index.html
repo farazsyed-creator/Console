@@ -198,6 +198,45 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 .rules li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:1px;background:var(--red)}
 .rules li b{color:var(--cream);font-weight:600}
 
+.entrylist{display:grid;gap:8px;margin-top:10px}
+.entry{
+  background:var(--panel);border:1px solid var(--edge);border-radius:3px;
+  border-left:3px solid var(--edge);padding:10px 11px;
+}
+.entry.fav{border-left-color:var(--amber)}
+.entry .name{
+  font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-size:11.5px;
+  color:var(--amber);margin-bottom:4px;
+}
+.entry .meta{
+  font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--silk-dim);margin-bottom:5px;
+}
+.entry .txt{
+  font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:11.5px;line-height:1.5;
+  color:var(--cream);opacity:.82;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-word;margin-bottom:8px;cursor:pointer;
+}
+.entry .txt.open{-webkit-line-clamp:unset;opacity:1}
+.entry .acts{display:flex;gap:6px;flex-wrap:wrap}
+.mini{
+  font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.11em;font-weight:600;font-size:10.5px;
+  background:var(--panel-lo);color:var(--silk);border:1px solid var(--edge);border-radius:2px;
+  padding:6px 10px;cursor:pointer;transition:all .13s;
+}
+.mini:hover{background:var(--panel-hi);color:var(--cream)}
+.mini:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.mini.star[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#1B1508}
+.mini.danger:hover{background:var(--red);border-color:var(--red);color:#fff}
+.mini.done{background:var(--green);border-color:var(--green);color:#12261A}
+.empty{
+  font-size:13.5px;color:var(--silk-dim);border:1px dashed var(--edge);
+  border-radius:3px;padding:14px;margin-top:10px;max-width:62ch;
+}
+.savedhd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:20px}
 .hidden{display:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:520px){
@@ -229,8 +268,9 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
     </div>
     <div class="btnrow">
       <button class="act primary" id="copyStyle">Copy style box</button>
+      <button class="act" id="favNow">★ Favourite</button>
       <button class="act" id="copyExclude">Copy exclude list</button>
-      <button class="act" id="clearAll">Clear saved</button>
+      <button class="act" id="clearAll">Reset levers</button>
       <button class="act" id="randomise">Surprise me</button>
       <span class="savenote" id="savenote"></span>
     </div>
@@ -240,6 +280,7 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 <div class="wrap">
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" aria-selected="true" data-tab="style">Style box</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="saved">Saved <span id="savedcount"></span></button>
     <button class="tab" role="tab" aria-selected="false" data-tab="lyrics">Lyric sheet</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="rules">Rules learned</button>
   </div>
@@ -247,6 +288,16 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
   <!-- ================= STYLE ================= -->
   <section id="panel-style">
     <div class="grid" id="modgrid"></div>
+  </section>
+
+  <!-- ================= SAVED ================= -->
+  <section id="panel-saved" class="hidden">
+    <div class="savedhd"><span class="silk">Favourites</span><span class="note" style="font-size:11px;color:var(--silk-dim);font-style:italic">kept until you delete them</span></div>
+    <div class="entrylist" id="favlist"></div>
+
+    <div class="savedhd"><span class="silk">History</span><span class="note" style="font-size:11px;color:var(--silk-dim);font-style:italic">last 40 you copied</span></div>
+    <div class="entrylist" id="histlist"></div>
+    <div class="btnrow" style="margin-top:12px"><button class="act" id="clearHist">Clear history</button></div>
   </section>
 
   <!-- ================= LYRICS ================= -->
@@ -265,6 +316,7 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
         <li><b>Simple loop harmony is the drift condition.</b> A four-chord minor vamp with Urdu lyrics goes filmi almost every time.</li>
         <li><b>The first third of the prompt is what lands.</b> Anything you can't afford to lose goes early; mood adjectives are expendable tail.</li>
         <li><b>Small edits inside a working frame beat rebuilding.</b> Three times now the fix was one tag, and the rebuild made it worse.</li>
+        <li><b>Film-score anchors suppress the drum kit.</b> If you want drums with one, say so explicitly — the kit module has an override for it.</li>
         <li><b>Exclusions belong in the Exclude Styles field</b>, not as negations inside the style box.</li>
         <li><b>v4.5 is inventive but ignores specifications. v5 obeys them.</b> Explore in 4.5, execute in 5.</li>
         <li><b>Heavy swing reads as happy.</b> For serious material use laid-back timing and ghost notes, and keep tambourine and handclaps out.</li>
@@ -355,6 +407,123 @@ const MODULES = [
     "Instruments Entering One At A Time"
   ]},
 
+  { id:"drums", label:"Drum kit", note:"score anchors kill kits", type:"select", opts:[
+    "Full Drum Kit Playing From The First Bar",
+    "Acoustic Drum Kit With A Steady Backbeat",
+    "Punchy Dry Close-Mic Drums Against Wet Instruments",
+    "Huge Gated Room Drums",
+    "Enormous Compressed Drums With Huge Room Reverb",
+    "Machine Tight Four On The Floor With A Hard Cracking Snare On Two And Four",
+    "Four On The Floor Kick With Offbeat Bass",
+    "Machine Precise Programmed Pulse Doubled By Live Kick And Snare",
+    "Drum Machine Only, No Live Kit",
+    "LinnDrum And CR-78 Vintage Drum Machines",
+    "Heavy Boom Bap Drum Groove With Huge Room Reverb",
+    "In The Pocket Soul Drumming With Ghost Notes",
+    "Loose Jazz Drumming With Ghost Notes And Mallets",
+    "Tom-Heavy Layered Drumming With Two Kits",
+    "Restrained Live Drums With A Loping Feel",
+    "Brushed Kit Entering Late And Loosely",
+    "Mallets On Toms, No Cymbals",
+    "Rimshot-Only Kit, Very Quiet",
+    "Dembow Reggaeton Groove",
+    "Motorik Eighth Note Pulse",
+    "Drums Enter At The Second Verse",
+    "Steady Understated Pulse Underneath",
+    "No Drum Kit At All"
+  ]},
+
+  { id:"feel", label:"Groove feel", note:"timing only", type:"select", opts:[
+    "Heavily Swung Sixteenth Note Feel",
+    "Lightly Shuffled Twelve Eight Feel",
+    "Loping Swung Groove",
+    "In The Pocket, Laid Back Behind The Beat",
+    "Pushing Ahead Of The Beat",
+    "Loose Human Timing Not Quantized",
+    "Machine Tight, Everything Locked To The Grid",
+    "Straight Eighth Note Feel, Driving",
+    "Continuous Sixteenth Note Motion Underneath",
+    "Double Time Hi-Hat Over A Slow Pulse",
+    "Half Time Feel Throughout",
+    "Open And Closed Hi-Hat Accents"
+  ]},
+
+  { id:"poly", label:"Polyrhythm &amp; syncopation", note:"the catchiness lever", type:"chips", opts:[
+    "Three Against Four Cross-Rhythm",
+    "Hemiola Three Against Two In The Accompaniment",
+    "Five Against Four Cross-Rhythm",
+    "Seven Eight Ostinato Over Four Four Drums",
+    "Piano Loop Cycling Out Of Phase With The Drums",
+    "Steve Reich Interlocking Phase Patterns",
+    "Two Interlocking Percussion Parts In Different Meters",
+    "Polyrhythmic Layered Percussion",
+    "Afrobeat Interlocking Parts",
+    "Three Two Son Clave",
+    "Two Three Rumba Clave",
+    "Tresillo Three Three Two Pattern",
+    "Displaced Backbeat With The Snare On Three",
+    "Backbeat Landing On The And Of Two",
+    "Syncopated Vocal Entries Starting Off The Downbeat",
+    "Anticipating The Downbeat, Landing Early",
+    "Offbeat Stabs Leaving Space Between Phrases",
+    "Bass Playing Counterpoint Against The Kick",
+    "Accent Pattern Shifting Every Bar",
+    "Broken Beat With Shifting Accents",
+    "Half Time Drop In The Chorus",
+    "Bar Of Two Four Inserted To Truncate Each Phrase",
+    "Metric Modulation, The Triplet Becoming The New Beat"
+  ]},
+
+  { id:"metre", label:"Metre", note:"one at a time", type:"select", opts:[
+    "Straight Four Four",
+    "Three Four Waltz Time",
+    "Six Eight Compound Duple, Lilting Two Beat Sway",
+    "Twelve Eight Slow Triplet Feel",
+    "Six Four, Spacious Wide Bars",
+    "Five Four Time Grouped As Three Plus Two",
+    "Seven Eight Time Grouped As Four Plus Three",
+    "Ten Four Time",
+    "Verse In Four Four Shifting To Six Eight For The Chorus"
+  ]},
+
+  { id:"perc", label:"Percussion layer", note:"stacks — clapping reads happy", type:"chips", opts:[
+    "Tambourine On The Backbeat",
+    "Continuous Sixteenth Note Shaker",
+    "Handclap Layer",
+    "Stomps And Finger Snaps",
+    "Congas And Bongos",
+    "Drip Percussion Motif",
+    "Glitchy Organic Percussion",
+    "Found Object Percussion",
+    "Bowed Cymbal Swells",
+    "Tubular Bells And Timpani",
+    "Gamelan Metallophones",
+    "Prepared Piano Strikes As Percussion",
+    "Sparse Rumbling Low Percussion",
+    "No Percussion Beyond The Kit"
+  ]},
+
+  { id:"bass", label:"Bass line", note:"the head-nod", type:"select", opts:[
+    "Motown Style Syncopated Melodic Bass Carrying Its Own Counter-Melody, Leaving Space Between Phrases",
+    "Neo-Soul Bass Laid Back Behind The Beat With Ghost Notes And Slides",
+    "Fretless Bass Sliding Between Notes, Answering The Vocal In Call And Response",
+    "Moog Synth Bass Ostinato Repeating Unchanged Every Bar With Portamento Glide",
+    "Dub Bass Sparse And Deep With Long Gaps, Locked Tight With The Kick",
+    "Syncopated Melodic Bass Ostinato Repeating Unchanged Every Bar As The Main Hook",
+    "Round Warm Fuzz Bass Mixed Forward",
+    "Distorted Sub Bass Pulse",
+    "Deep Round Sub Bass",
+    "Upright Bass Walking Stepwise",
+    "Disco Octave Bass Jumping Between Octaves",
+    "House Bass On The Offbeat Eighths",
+    "Post-Punk Melodic Bass Playing High In Its Range",
+    "Afrobeat Interlocking Repeating Bass Figure",
+    "Gospel Bass Walking Up Chromatically Into Each Chord",
+    "Bass Playing Counterpoint Against The Kick, Not Following It",
+    "Reese Bass, Detuned And Wide",
+    "Palm-Muted Bass With Flatwound Dead Thump"
+  ]},
+
   { id:"texture", label:"Texture pair", note:"rotate this", type:"select", opts:[
     "Mellotron And Bowed Vibraphone Processed Through Tape Degradation",
     "Chamber Organ And Celesta Processed Through Tape Degradation",
@@ -389,27 +558,6 @@ const MODULES = [
     "Pizzicato Strings Answering The Vocal"
   ]},
 
-  { id:"bass", label:"Bass line", note:"the head-nod", type:"select", opts:[
-    "Motown Style Syncopated Melodic Bass Carrying Its Own Counter-Melody, Leaving Space Between Phrases",
-    "Neo-Soul Bass Laid Back Behind The Beat With Ghost Notes And Slides",
-    "Fretless Bass Sliding Between Notes, Answering The Vocal In Call And Response",
-    "Moog Synth Bass Ostinato Repeating Unchanged Every Bar With Portamento Glide",
-    "Dub Bass Sparse And Deep With Long Gaps, Locked Tight With The Kick",
-    "Syncopated Melodic Bass Ostinato Repeating Unchanged Every Bar As The Main Hook",
-    "Round Warm Fuzz Bass Mixed Forward",
-    "Distorted Sub Bass Pulse",
-    "Deep Round Sub Bass",
-    "Upright Bass Walking Stepwise",
-    "Disco Octave Bass Jumping Between Octaves",
-    "House Bass On The Offbeat Eighths",
-    "Post-Punk Melodic Bass Playing High In Its Range",
-    "Afrobeat Interlocking Repeating Bass Figure",
-    "Gospel Bass Walking Up Chromatically Into Each Chord",
-    "Bass Playing Counterpoint Against The Kick, Not Following It",
-    "Reese Bass, Detuned And Wide",
-    "Palm-Muted Bass With Flatwound Dead Thump"
-  ]},
-
   { id:"synthpat", label:"Synth pattern", note:"what it plays", type:"select", opts:[
     "Continuous Sixteenth Note Analog Synth Arpeggio",
     "Cascading Arpeggio With Slow Filter Sweep",
@@ -442,42 +590,7 @@ const MODULES = [
     "Bitcrushed Degraded Synth"
   ]},
 
-  { id:"groove", label:"Groove feel", note:"swing = happier", type:"select", opts:[
-    "Heavily Swung Sixteenth Note Feel",
-    "Lightly Shuffled Twelve Eight Feel",
-    "In The Pocket Drumming Laid Back Behind The Beat",
-    "Straight Eighth Note Feel, Driving",
-    "Loping Swung Groove",
-    "Ghost Notes On The Snare, Open And Closed Hi-Hat Accents",
-    "Machine Tight Kick With A Hard Cracking Snare On Two And Four",
-    "Punchy Dry Close-Mic Drums Against Wet Instruments",
-    "Restrained Live Drums With A Loping Feel",
-    "Brushed Kit Entering Late And Loosely",
-    "Heavy Boom Bap Drum Groove With Huge Room Reverb",
-    "Four On The Floor Kick With Offbeat Bass",
-    "Dembow Reggaeton Groove",
-    "Steady Understated Pulse Underneath",
-    "Continuous Sixteenth Note Shaker Keeping Constant Motion",
-    "Tambourine On The Backbeat And Handclap Layer"
-  ]},
-
-  { id:"rhythdev", label:"Rhythm device", note:"one per song", type:"select", opts:[
-    "Half Time Drop In The Chorus",
-    "Displaced Backbeat With The Snare On Three",
-    "Bar Of Two Four Inserted To Truncate Each Phrase",
-    "Three Against Four Cross-Rhythm",
-    "Hemiola Three Against Two In The Accompaniment",
-    "Three Two Son Clave Rhythmic Foundation",
-    "New Orleans Second Line Groove",
-    "Shifting Between Six Eight And Three Four Between Sections",
-    "Five Four Time Grouped As Three Plus Two",
-    "Seven Eight Time Grouped As Four Plus Three",
-    "Three Four Waltz Time",
-    "Twelve Eight Slow Triplet Feel",
-    "Metric Modulation, The Triplet Becoming The New Beat"
-  ]},
-
-  { id:"prod", label:"Production", note:"producer > adjective", type:"select", opts:[
+  { id:"prod", label:"Production", note:"producer &gt; adjective", type:"select", opts:[
     "Nigel Godrich Production",
     "Brian Eno Production",
     "David Foster Production",
@@ -496,7 +609,7 @@ const MODULES = [
     "Huge Reverb On Instruments, Dry Vocal"
   ]},
 
-  { id:"tempo", label:"Tempo", note:"density > BPM", type:"select", opts:[
+  { id:"tempo", label:"Tempo", note:"density &gt; BPM", type:"select", opts:[
     "72 BPM","76 BPM","78 BPM","80 BPM","82 BPM","84 BPM","86 BPM","88 BPM",
     "90 BPM","92 BPM","93 BPM","96 BPM","97 BPM","100 BPM","108 BPM","110 BPM","117 BPM","124 BPM"
   ]},
@@ -724,6 +837,119 @@ function markStorage(){
   if (el) el.textContent = storageOK ? "Selections save on this device" : "Saving unavailable here — works once hosted";
 }
 
+/* ---- history + favourites ---- */
+const HIST_KEY = "promptConsole.history.v1";
+const FAV_KEY  = "promptConsole.favourites.v1";
+let history_ = [], favourites = [];
+
+function readList(k){ try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : []; } catch(e){ return []; } }
+function writeList(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+function stamp(){
+  const d = new Date();
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short"}) + " · " +
+         d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+}
+function snapshot(){
+  const copy = {};
+  MODULES.forEach(m => copy[m.id] = m.type === "chips" ? state[m.id].slice() : state[m.id]);
+  return { id: Date.now() + "-" + Math.random().toString(36).slice(2,7), t: stamp(), text: assemble(), state: copy };
+}
+function addHistory(){
+  const snap = snapshot();
+  if (snap.text === "Male Vocals.") return;
+  if (history_.length && history_[0].text === snap.text) return;
+  history_.unshift(snap);
+  history_ = history_.slice(0, 40);
+  writeList(HIST_KEY, history_);
+  renderLists();
+}
+function addFavourite(entry){
+  const snap = entry || snapshot();
+  if (snap.text === "Male Vocals.") return false;
+  if (favourites.some(f => f.text === snap.text)) return "dupe";
+  favourites.unshift({ ...snap, id: Date.now()+"-f", name: "" });
+  writeList(FAV_KEY, favourites);
+  renderLists();
+  return true;
+}
+function applyEntry(e){
+  MODULES.forEach(m => {
+    const v = e.state[m.id];
+    if (m.type === "chips") state[m.id] = Array.isArray(v) ? v.slice() : [];
+    else state[m.id] = typeof v === "string" ? v : "";
+  });
+  syncUI(); render();
+  document.querySelector('.tab[data-tab="style"]').click();
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function entryNode(e, isFav){
+  const d = document.createElement("div");
+  d.className = "entry" + (isFav ? " fav" : "");
+  if (isFav && e.name) {
+    const n = document.createElement("div"); n.className="name"; n.textContent = e.name; d.appendChild(n);
+  }
+  const meta = document.createElement("div"); meta.className="meta"; meta.textContent = e.t; d.appendChild(meta);
+  const txt = document.createElement("div"); txt.className="txt"; txt.textContent = e.text;
+  txt.title = "Tap to expand";
+  txt.addEventListener("click", ()=> txt.classList.toggle("open"));
+  d.appendChild(txt);
+
+  const acts = document.createElement("div"); acts.className="acts";
+  const mk = (label, cls, fn) => {
+    const b = document.createElement("button"); b.type="button";
+    b.className = "mini" + (cls ? " " + cls : ""); b.textContent = label;
+    b.addEventListener("click", ()=> fn(b)); acts.appendChild(b); return b;
+  };
+  mk("Load", "", ()=> applyEntry(e));
+  mk("Copy", "", b => { copy(e.text); const o=b.textContent; b.textContent="Copied"; b.classList.add("done");
+      setTimeout(()=>{b.textContent=o;b.classList.remove("done");},1000); });
+  if (isFav) {
+    mk("Rename", "", () => {
+      const n = window.prompt("Name this favourite", e.name || "");
+      if (n !== null) { e.name = n.trim(); writeList(FAV_KEY, favourites); renderLists(); }
+    });
+    mk("Delete", "danger", () => {
+      favourites = favourites.filter(f => f.id !== e.id); writeList(FAV_KEY, favourites); renderLists();
+    });
+  } else {
+    mk("★ Favourite", "star", b => {
+      const r = addFavourite(e);
+      const o = b.textContent;
+      b.textContent = r === "dupe" ? "Already saved" : "Saved";
+      b.classList.add("done");
+      setTimeout(()=>{ b.textContent=o; b.classList.remove("done"); }, 1100);
+    });
+    mk("Remove", "danger", () => {
+      history_ = history_.filter(h => h.id !== e.id); writeList(HIST_KEY, history_); renderLists();
+    });
+  }
+  d.appendChild(acts);
+  return d;
+}
+
+function renderLists(){
+  const fl = document.getElementById("favlist");
+  const hl = document.getElementById("histlist");
+  if (!fl || !hl) return;
+  fl.innerHTML = ""; hl.innerHTML = "";
+  if (!favourites.length) {
+    const e = document.createElement("div"); e.className="empty";
+    e.textContent = "Nothing favourited yet. Build a prompt, then tap ★ Favourite at the top.";
+    fl.appendChild(e);
+  } else favourites.forEach(f => fl.appendChild(entryNode(f, true)));
+
+  if (!history_.length) {
+    const e = document.createElement("div"); e.className="empty";
+    e.textContent = "Every prompt you copy lands here automatically, newest first.";
+    hl.appendChild(e);
+  } else history_.forEach(h => hl.appendChild(entryNode(h, false)));
+
+  const c = document.getElementById("savedcount");
+  if (c) c.textContent = favourites.length ? "(" + favourites.length + ")" : "";
+}
+
 const lcd = document.getElementById("lcd");
 const meter = document.getElementById("meter");
 const fill = document.getElementById("meterfill");
@@ -745,8 +971,11 @@ function render(){
   saveState();
 }
 loadState();
+history_ = readList(HIST_KEY);
+favourites = readList(FAV_KEY);
 syncUI();
 render();
+renderLists();
 markStorage();
 
 /* ============ ACTIONS ============ */
@@ -768,7 +997,14 @@ function flash(btn, word){
   setTimeout(()=>{ btn.textContent = old; btn.classList.remove("ok"); }, 1100);
 }
 
-document.getElementById("copyStyle").addEventListener("click", e => { copy(assemble()); flash(e.target,"Copied"); });
+document.getElementById("copyStyle").addEventListener("click", e => { copy(assemble()); addHistory(); flash(e.target,"Copied"); });
+document.getElementById("favNow").addEventListener("click", e => {
+  const r = addFavourite();
+  flash(e.target, r === "dupe" ? "Already saved" : r ? "Favourited" : "Nothing to save");
+});
+document.getElementById("clearHist").addEventListener("click", e => {
+  history_ = []; writeList(HIST_KEY, history_); renderLists(); flash(e.target, "History cleared");
+});
 document.getElementById("copyExclude").addEventListener("click", e => {
   const x = excludeList();
   copy(x);
@@ -798,7 +1034,7 @@ document.getElementById("randomise").addEventListener("click", () => {
 });
 
 /* tabs */
-const panels = { style:"panel-style", lyrics:"panel-lyrics", rules:"panel-rules" };
+const panels = { style:"panel-style", saved:"panel-saved", lyrics:"panel-lyrics", rules:"panel-rules" };
 document.querySelectorAll(".tab").forEach(t => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected","false"));
