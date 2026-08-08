@@ -101,6 +101,9 @@ header{
 
 .btnrow{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center}
 .savenote{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;color:var(--silk-dim)}
+.vbadge{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;letter-spacing:.13em;font-size:10.5px;font-weight:600}
+.vbadge.orig{color:var(--green)}
+.vbadge.edited{color:var(--red)}
 button.act{
   font-family:'Barlow Condensed','Avenir Next Condensed','Helvetica Neue',sans-serif;
   text-transform:uppercase;letter-spacing:.12em;font-weight:600;font-size:12px;
@@ -114,6 +117,7 @@ button.act:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 button.act.primary{background:var(--red);border-color:var(--red);color:#fff}
 button.act.primary:hover{background:#F26640}
 button.act.ok{background:var(--green);border-color:var(--green);color:#12261A}
+button.act[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#1B1508}
 
 /* ---------- tabs ---------- */
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--edge);margin-top:18px}
@@ -144,6 +148,12 @@ select{
   padding:8px 9px;cursor:pointer;
 }
 select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+textarea{
+  width:100%;font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:12px;line-height:1.5;
+  background:var(--panel-lo);color:var(--cream);border:1px solid var(--edge);border-radius:2px;
+  padding:8px 9px;resize:vertical;
+}
+textarea:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{
   font-family:'Barlow',sans-serif;font-size:12.5px;
@@ -244,6 +254,11 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 }
 .presetwrap .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
 .presetwrap .note{font-size:11px;color:var(--silk-dim);font-style:italic}
+#presetFilter{
+  width:100%;margin-bottom:9px;font-family:'Barlow','Helvetica Neue',sans-serif;font-size:14px;
+  background:var(--panel-lo);color:var(--cream);border:1px solid var(--edge);border-radius:2px;padding:8px 9px;
+}
+#presetFilter:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 .preset{
   font-family:'Barlow','Helvetica Neue',sans-serif;font-size:12.5px;
   background:var(--panel-lo);color:var(--cream);
@@ -253,6 +268,18 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 .preset:hover{border-color:var(--red);color:#fff}
 .preset:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .preset.loaded{background:var(--red);border-color:var(--red);color:#fff}
+.preset.draft{color:var(--silk-dim);border-style:dashed}
+.btag{
+  font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:11.5px;
+  background:var(--panel-lo);color:var(--cream);border:1px solid var(--edge);
+  border-radius:2px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:all .13s;text-align:left;
+}
+.btag:hover{border-color:var(--red);color:#fff}
+.btag span{color:var(--silk-dim);font-family:'Barlow',sans-serif;font-size:13px;line-height:1}
+.btag:hover span{color:var(--red)}
+.btag:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.preset.draft:hover{color:var(--silk)}
 .hidden{display:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:520px){
@@ -276,7 +303,7 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 
 <div class="readout-shell">
   <div class="wrap">
-    <div class="silk" style="margin-bottom:5px">Style box output</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px"><span class="silk">Style box output</span><span class="vbadge" id="vbadge"></span></div>
     <div class="lcd" id="lcd"><span class="placeholder">Male Vocals, …pick levers below</span></div>
     <div class="meter-row">
       <div class="meter" id="meter"><i id="meterfill"></i></div>
@@ -284,6 +311,9 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
     </div>
     <div class="btnrow">
       <button class="act primary" id="copyStyle">Copy style box</button>
+      <button class="act" id="restoreBtn" style="display:none">Reset to preset</button>
+      <button class="act" id="detachBtn" style="display:none">Drop preset</button>
+      <button class="act" id="drumsFirstBtn" aria-pressed="false">Drums first</button>
       <button class="act" id="favNow">★ Favourite</button>
       <button class="act" id="copyExclude">Copy exclude list</button>
       <button class="act" id="clearAll">Reset levers</button>
@@ -304,8 +334,14 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
   <!-- ================= STYLE ================= -->
   <section id="panel-style">
     <div class="presetwrap">
-      <div class="hd"><span class="silk">Presets</span><span class="note">tap to load, then edit any lever</span></div>
+      <div class="hd"><span class="silk">Presets</span><span class="note">solid = yours · dashed = drafts</span></div>
+      <input type="search" id="presetFilter" placeholder="Filter presets…" aria-label="Filter presets">
       <div class="chips" id="presetbar"></div>
+      <div id="baseEditor" style="display:none">
+        <div class="hd" style="margin-top:12px"><span class="silk">Preset tags — tap × to remove</span><button class="mini" id="rawToggle" type="button">Edit as text</button></div>
+        <div class="chips" id="basechips"></div>
+        <textarea id="baseRaw" rows="4" style="display:none;margin-top:8px" aria-label="Preset text"></textarea>
+      </div>
     </div>
     <div class="grid" id="modgrid"></div>
   </section>
@@ -336,7 +372,7 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
         <li><b>Simple loop harmony is the drift condition.</b> A four-chord minor vamp with Urdu lyrics goes filmi almost every time.</li>
         <li><b>The first third of the prompt is what lands.</b> Anything you can't afford to lose goes early; mood adjectives are expendable tail.</li>
         <li><b>Small edits inside a working frame beat rebuilding.</b> Three times now the fix was one tag, and the rebuild made it worse.</li>
-        <li><b>Film-score anchors suppress the drum kit.</b> If you want drums with one, say so explicitly — the kit module has an override for it.</li>
+        <li><b>Film-score and ballad anchors suppress the drum kit</b>, and the anchor sits earlier in the prompt than the kit does, so it wins. Use the Drums first toggle to hoist the whole rhythm block ahead of the anchor.</li>
         <li><b>Exclusions belong in the Exclude Styles field</b>, not as negations inside the style box.</li>
         <li><b>v4.5 is inventive but ignores specifications. v5 obeys them.</b> Explore in 4.5, execute in 5.</li>
         <li><b>Heavy swing reads as happy.</b> For serious material use laid-back timing and ghost notes, and keep tambourine and handclaps out.</li>
@@ -418,6 +454,7 @@ const MODULES = [
     "Driving Repeating String Ostinato Running Throughout",
     "Repeating Arpeggiated Ostinato Running Continuously Underneath",
     "Minimalist Repeating Cells Accumulating",
+    "Minimal Harmonic Movement With Slowly Decaying Textures",
     "Piano Loop Cycling Out Of Phase With The Drum Pattern",
     "Steve Reich Interlocking Patterns",
     "Pedal Point With Chords Shifting Above A Held Bass Note",
@@ -429,6 +466,8 @@ const MODULES = [
 
   { id:"drums", label:"Drum kit", note:"score anchors kill kits", type:"select", opts:[
     "Full Drum Kit Playing From The First Bar",
+    "Drums Loud And Forward In The Mix Throughout",
+    "Prominent Insistent Drum Kit Driving The Whole Song",
     "Acoustic Drum Kit With A Steady Backbeat",
     "Punchy Dry Close-Mic Drums Against Wet Instruments",
     "Huge Gated Room Drums",
@@ -444,6 +483,7 @@ const MODULES = [
     "Tom-Heavy Layered Drumming With Two Kits",
     "Restrained Live Drums With A Loping Feel",
     "Brushed Kit Entering Late And Loosely",
+    "Brushed Kit With A Loping Feel",
     "Mallets On Toms, No Cymbals",
     "Rimshot-Only Kit, Very Quiet",
     "Dembow Reggaeton Groove",
@@ -531,6 +571,7 @@ const MODULES = [
     "Dub Bass Sparse And Deep With Long Gaps, Locked Tight With The Kick",
     "Syncopated Melodic Bass Ostinato Repeating Unchanged Every Bar As The Main Hook",
     "Round Warm Fuzz Bass Mixed Forward",
+    "Distorted Sub Bass Under Clean Electric Guitar Harmonics",
     "Distorted Sub Bass Pulse",
     "Deep Round Sub Bass",
     "Upright Bass Walking Stepwise",
@@ -578,7 +619,7 @@ const MODULES = [
     "Pizzicato Strings Answering The Vocal"
   ]},
 
-  { id:"synthpat", label:"Synth pattern", note:"what it plays", type:"select", opts:[
+  { id:"synthpat", label:"Synth pattern", note:"stacks", type:"chips", opts:[
     "Continuous Sixteenth Note Analog Synth Arpeggio",
     "Cascading Arpeggio With Slow Filter Sweep",
     "Short Repeating Synth Hook Line Returning Between Every Vocal Phrase",
@@ -610,6 +651,24 @@ const MODULES = [
     "Bitcrushed Degraded Synth"
   ]},
 
+  { id:"harm", label:"Harmony &amp; voicing", note:"stacks", type:"chips", opts:[
+    "Open Voicings With Wide Spacing",
+    "Added Ninths And Major Sevenths",
+    "Major Sevenths And Added Ninths",
+    "Extended Voicings With Major Sevenths And Unresolved Suspensions",
+    "Unresolved Suspensions",
+    "Chromatic Bass Movement Under Static Upper Voices",
+    "Chromatic Descending Bass Line",
+    "Borrowed Minor Chords",
+    "Secondary Dominants",
+    "Picardy Third At The Final Cadence",
+    "Bittersweet Minor Key With A Major Lift",
+    "Minor Verse Resolving To A Parallel Major Chorus",
+    "Chromatic Mediant Chord Movement",
+    "Two Chord Minor Vamp",
+    "Simple Four Chord Loop With A Chromatic Descending Bass Line"
+  ]},
+
   { id:"prod", label:"Production", note:"producer &gt; adjective", type:"select", opts:[
     "Nigel Godrich Production",
     "Brian Eno Production",
@@ -630,8 +689,8 @@ const MODULES = [
   ]},
 
   { id:"tempo", label:"Tempo", note:"density &gt; BPM", type:"select", opts:[
-    "72 BPM","76 BPM","78 BPM","80 BPM","82 BPM","84 BPM","86 BPM","88 BPM",
-    "90 BPM","92 BPM","93 BPM","96 BPM","97 BPM","100 BPM","108 BPM","110 BPM","117 BPM","124 BPM"
+    "Slow Tempo","Medium Tempo","Mid-Tempo","Up-Tempo","Fast Tempo","66 BPM","70 BPM","72 BPM","75 BPM","76 BPM","78 BPM","80 BPM","82 BPM","84 BPM","86 BPM","88 BPM",
+    "90 BPM","92 BPM","93 BPM","96 BPM","97 BPM","100 BPM","104 BPM","108 BPM","110 BPM","112 BPM","117 BPM","120 BPM","124 BPM","128 BPM"
   ]},
 
   { id:"struct", label:"Structure &amp; hook", note:"pick a few", type:"chips", opts:[
@@ -654,7 +713,8 @@ const MODULES = [
   ]},
 
   { id:"mood", label:"Mood", note:"expendable tail", type:"chips", opts:[
-    "Melancholic And Cinematic","Tender And Uplifting","Yearning And Cathartic",
+    "Melancholic And Cinematic","Cinematic And Yearning","Existential Melancholic Cinematic",
+    "Tender And Uplifting","Yearning And Cathartic",
     "Warm Nostalgic And Tender","Hushed And Devotional","Awestruck And Uplifting",
     "Wounded Tender And Cinematic","Haunting And Ceremonial","Bittersweet And Warm",
     "Relentless Hypnotic And Tense","Sad Song You Can Dance To","Raw Soulful And Cathartic",
@@ -708,6 +768,7 @@ const RECIPES = [
 /* ============ STATE ============ */
 const state = {};
 MODULES.forEach(m => state[m.id] = m.type === "chips" ? [] : "");
+state.__extra = "";
 
 /* ============ BUILD UI ============ */
 const grid = document.getElementById("modgrid");
@@ -730,7 +791,7 @@ MODULES.forEach(m => {
       op.value = o; op.textContent = o;
       sel.appendChild(op);
     });
-    sel.addEventListener("change", e => { state[m.id] = e.target.value; render(); });
+    sel.addEventListener("change", e => { state[m.id] = e.target.value; breakVerbatim(); render(); });
     sel.id = "sel-" + m.id;
     box.appendChild(sel);
   } else {
@@ -749,6 +810,7 @@ MODULES.forEach(m => {
         const i = state[m.id].indexOf(v);
         if (i > -1) { state[m.id].splice(i,1); b.setAttribute("aria-pressed","false"); }
         else { state[m.id].push(v); b.setAttribute("aria-pressed","true"); }
+        breakVerbatim();
         render();
       });
       wrap.appendChild(b);
@@ -757,6 +819,14 @@ MODULES.forEach(m => {
   }
   grid.appendChild(box);
 });
+
+/* free-text extras module */
+const extraBox = document.createElement("div");
+extraBox.className = "mod";
+extraBox.innerHTML =
+  `<div class="hd"><span class="silk">Extra tags</span><span class="note">anything not on a lever</span></div>
+   <textarea id="extraTags" rows="3" placeholder="Comma separated. Carried by presets; edit or clear freely."></textarea>`;
+grid.appendChild(extraBox);
 
 /* locked vocal module */
 const lockBox = document.createElement("div");
@@ -806,12 +876,82 @@ RECIPES.forEach(r => {
 });
 
 /* ============ RENDER ============ */
+let drumsFirst = false;
+let baseTags = null;          // preset body as an editable tag list; levers append to it
+let baseName = "";
+Object.defineProperty(globalThis, "baseText", {
+  get(){ return baseTags && baseTags.length ? baseTags.join(", ") : null; },
+  set(v){ baseTags = (typeof v === "string" && v.trim()) ? splitTags(v) : null; }
+});
+function splitTags(t){ return t.split(",").map(x => x.trim()).filter(Boolean); }
+function renderBaseChips(){
+  const wrap = document.getElementById("baseEditor");
+  const box  = document.getElementById("basechips");
+  const raw  = document.getElementById("baseRaw");
+  if (!wrap) return;
+  if (!baseTags || !baseTags.length) { wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  box.innerHTML = "";
+  baseTags.forEach((t, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btag";
+    b.innerHTML = document.createTextNode(t).textContent.replace(/</g,"&lt;") + '<span>&times;</span>';
+    b.title = "Remove this tag";
+    b.addEventListener("click", () => { baseTags.splice(i,1); renderBaseChips(); render(); });
+    box.appendChild(b);
+  });
+  if (raw && raw.style.display !== "none") raw.value = baseTags.join(", ");
+}
+function breakVerbatim(){ updateBadge(); }
+function updateBadge(){
+  const b = document.getElementById("vbadge");
+  const r = document.getElementById("restoreBtn");
+  if (!b) return;
+  if (baseText) {
+    const n = leverCount();
+    b.textContent = n ? baseName + " + " + n + (n===1?" addition":" additions") : "Original · " + baseName;
+    b.className = n ? "vbadge edited" : "vbadge orig";
+  } else { b.textContent = ""; b.className = "vbadge"; }
+  if (r) r.style.display = baseText ? "" : "none";
+  const d = document.getElementById("detachBtn");
+  if (d) d.style.display = baseText ? "" : "none";
+}
+const RHYTHM_IDS = ["drums","feel","poly","perc"];
+function pushMod(parts, m){
+  if (m.type === "select") { if (state[m.id]) parts.push(state[m.id]); }
+  else state[m.id].forEach(v => parts.push(v));
+}
+function leverCount(){
+  let n = 0;
+  MODULES.forEach(m => {
+    if (m.id === "exclude" || (baseText && m.id === "tempo")) return;
+    if (m.type === "select") { if (state[m.id]) n++; }
+    else n += state[m.id].length;
+  });
+  if (state.__extra.trim()) n++;
+  return n;
+}
 function assemble(){
   const parts = ["Male Vocals"];
-  MODULES.forEach(m => {
+  if (baseText) {
+    parts.push(baseText);
+    if (state.tempo) parts.push(state.tempo);
+    const order = drumsFirst
+      ? MODULES.filter(m => RHYTHM_IDS.includes(m.id)).concat(MODULES.filter(m => !RHYTHM_IDS.includes(m.id)))
+      : MODULES;
+    order.forEach(m => { if (m.id !== "exclude" && m.id !== "tempo") pushMod(parts, m); });
+    state.__extra.split(",").map(x => x.trim()).filter(Boolean).forEach(x => parts.push(x));
+    return parts.join(", ") + ".";
+  }
+  const order = drumsFirst
+    ? MODULES.filter(m => RHYTHM_IDS.includes(m.id)).concat(MODULES.filter(m => !RHYTHM_IDS.includes(m.id)))
+    : MODULES;
+  order.forEach(m => {
     if (m.id === "exclude") return;
-    if (m.type === "select") { if (state[m.id]) parts.push(state[m.id]); }
-    else state[m.id].forEach(v => parts.push(v));
+    if (m.id === "struct") {
+      state.__extra.split(",").map(x => x.trim()).filter(Boolean).forEach(x => parts.push(x));
+    }
+    pushMod(parts, m);
   });
   return parts.join(", ") + ".";
 }
@@ -822,7 +962,7 @@ const STORE_KEY = "promptConsole.v1";
 let storageOK = true;
 function saveState(){
   if (!storageOK) return;
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ ...state, __verbatim: baseText, __vname: baseName })); }
   catch(e){ storageOK = false; markStorage(); }
 }
 function loadState(){
@@ -835,6 +975,9 @@ function loadState(){
       if (m.type === "chips") { if (Array.isArray(v)) state[m.id] = v; }
       else if (typeof v === "string") state[m.id] = v;
     });
+    if (typeof saved.__extra === "string") state.__extra = saved.__extra;
+    if (typeof saved.__verbatim === "string") baseText = saved.__verbatim;
+    if (typeof saved.__vname === "string") baseName = saved.__vname;
   } catch(e){ storageOK = false; }
 }
 function clearStore(){
@@ -851,6 +994,8 @@ function syncUI(){
     const arr = state[c.dataset.mod] || [];
     c.setAttribute("aria-pressed", arr.includes(c.dataset.val) ? "true" : "false");
   });
+  const ex = document.getElementById("extraTags");
+  if (ex) ex.value = state.__extra || "";
 }
 function markStorage(){
   const el = document.getElementById("savenote");
@@ -873,6 +1018,9 @@ function stamp(){
 function snapshot(){
   const copy = {};
   MODULES.forEach(m => copy[m.id] = m.type === "chips" ? state[m.id].slice() : state[m.id]);
+  copy.__extra = state.__extra;
+  copy.__verbatim = baseText;
+  copy.__vname = baseName;
   return { id: Date.now() + "-" + Math.random().toString(36).slice(2,7), t: stamp(), text: assemble(), state: copy };
 }
 function addHistory(){
@@ -899,7 +1047,10 @@ function applyEntry(e){
     if (m.type === "chips") state[m.id] = Array.isArray(v) ? v.slice() : [];
     else state[m.id] = typeof v === "string" ? v : "";
   });
-  syncUI(); render();
+  state.__extra = typeof e.state.__extra === "string" ? e.state.__extra : "";
+  baseText = (typeof e.state.__verbatim === "string") ? e.state.__verbatim : null;
+  baseName = e.state.__vname || "";
+  syncUI(); render(); updateBadge(); renderBaseChips();
   document.querySelector('.tab[data-tab="style"]').click();
   window.scrollTo({ top:0, behavior:"smooth" });
 }
@@ -970,6 +1121,9 @@ function renderLists(){
   if (c) c.textContent = favourites.length ? "(" + favourites.length + ")" : "";
 }
 
+const extraEl = document.getElementById("extraTags");
+if (extraEl) extraEl.addEventListener("input", e => { state.__extra = e.target.value; breakVerbatim(); render(); });
+
 const lcd = document.getElementById("lcd");
 const meter = document.getElementById("meter");
 const fill = document.getElementById("meterfill");
@@ -989,6 +1143,7 @@ function render(){
   meter.classList.toggle("warn", over);
   countEl.classList.toggle("warn", over);
   saveState();
+  updateBadge();
 }
 loadState();
 history_ = readList(HIST_KEY);
@@ -997,6 +1152,8 @@ syncUI();
 render();
 renderLists();
 markStorage();
+updateBadge();
+renderBaseChips();
 
 /* ============ ACTIONS ============ */
 function copy(text){
@@ -1018,6 +1175,17 @@ function flash(btn, word){
 }
 
 document.getElementById("copyStyle").addEventListener("click", e => { copy(assemble()); addHistory(); flash(e.target,"Copied"); });
+const dfBtn = document.getElementById("drumsFirstBtn");
+try { drumsFirst = localStorage.getItem("promptConsole.drumsFirst") === "1"; } catch(e){}
+dfBtn.setAttribute("aria-pressed", drumsFirst ? "true" : "false");
+dfBtn.addEventListener("click", () => {
+  drumsFirst = !drumsFirst;
+  dfBtn.setAttribute("aria-pressed", drumsFirst ? "true" : "false");
+  try { localStorage.setItem("promptConsole.drumsFirst", drumsFirst ? "1" : "0"); } catch(e){}
+  render();
+});
+render();
+
 document.getElementById("favNow").addEventListener("click", e => {
   const r = addFavourite();
   flash(e.target, r === "dupe" ? "Already saved" : r ? "Favourited" : "Nothing to save");
@@ -1032,7 +1200,11 @@ document.getElementById("copyExclude").addEventListener("click", e => {
 });
 document.getElementById("clearAll").addEventListener("click", e => {
   MODULES.forEach(m => { state[m.id] = m.type === "chips" ? [] : ""; });
+  state.__extra = "";
+  baseTags = null; baseName = "";
   clearStore();
+  renderBaseChips();
+  updateBadge();
   syncUI();
   render();
   flash(e.target, "Cleared");
@@ -1055,125 +1227,399 @@ document.getElementById("randomise").addEventListener("click", () => {
 
 /* ---- presets ---- */
 const PRESETS = [
- { n:"In Rainbows", s:{ anchor:"In Rainbows Era Radiohead Ballad", opening:"Opening On Solo Fingerpicked Acoustic Guitar",
-   drums:"Brushed Kit Entering Late And Loosely", feel:"Loping Swung Groove",
-   texture:"Fingerpicked Open Tuned Acoustic Guitar And Warm Piano Interplay", counter:"Solo Cello Counter-Melody",
-   bass:"Round Warm Fuzz Bass Mixed Forward", prod:"Warm Analog Production", tempo:"78 BPM",
-   struct:["No Gaps Between Vocal Lines","Long Sustained Notes Held Across Bar Lines"], mood:["Melancholic And Cinematic"] }},
-
- { n:"OK Computer", s:{ anchor:"OK Computer Era Radiohead Ballad", opening:"Opening On Solo Minor Piano Ostinato",
-   drums:"Brushed Kit Entering Late And Loosely", texture:"Warm Piano And Clean Electric Guitar Interplay",
-   counter:"Glockenspiel Counter-Melody", bass:"Round Warm Fuzz Bass Mixed Forward",
-   prod:"Warm Analog Production", tempo:"76 BPM",
-   struct:["No Gaps Between Vocal Lines","Strings Swelling Through The Final Chorus"], mood:["Melancholic And Cinematic"] }},
-
- { n:"Reznor film score", s:{ anchor:"Reznor And Ross Film Score Style", opening:"Opening On A Solo Analog Sequence With No Piano",
-   arch:"Arpeggiated Analog Sequence Beneath Long Sustained Notes", drums:"Steady Understated Pulse Underneath",
-   texture:"Mellotron And Bowed Vibraphone Processed Through Tape Degradation", counter:"Bass Clarinet Counter-Melody",
-   bass:"Distorted Sub Bass Pulse", synthpat:"Alessandro Cortini Modular Synth Textures", prod:"Cold Digital Reverb",
-   struct:["No Gaps Between Vocal Lines","Melodic Economy Few Notes Held Long"], mood:["Yearning And Cathartic"] }},
-
- { n:"Viva La Vida", s:{ anchor:"Coldplay Viva La Vida Era", arch:"Driving Repeating String Ostinato Running Throughout",
-   drums:"Full Drum Kit Playing From The First Bar", feel:"Straight Eighth Note Feel, Driving",
-   perc:["Tubular Bells And Timpani"], synthpat:"Short Repeating Synth Hook Line Returning Between Every Vocal Phrase",
-   bass:"Deep Round Sub Bass", prod:"Brian Eno Production", tempo:"96 BPM",
-   struct:["Short Repeating Hook Returning Between Every Vocal Phrase","Massed Unison Vocal Chorus","Builds In Density Not Vocal Intensity"],
-   mood:["Triumphant And Yearning"] }},
-
- { n:"Stromae ballad", s:{ anchor:"Stromae Formidable Style Melancholic Chanson Ballad", opening:"Opening On Solo Accordion",
-   arch:"Sparse Minimal Arrangement With Very Few Elements Each Distinct", drums:"Brushed Kit Entering Late And Loosely",
-   feel:"Heavily Swung Sixteenth Note Feel", counter:"Accordion Counter-Melody", bass:"Deep Round Sub Bass", tempo:"78 BPM",
-   struct:["Repetitive Earworm Hook Repeating Throughout","Melodic Economy Few Notes Held Long"], mood:["Wounded Tender And Cinematic"] }},
-
- { n:"Vintage soul", s:{ anchor:"Vintage Soul Ballad With Modern Adult Contemporary Production", opening:"Opening On Solo Wurlitzer",
-   arch:"Full Band Playing Together From The First Verse Not Sparse", drums:"In The Pocket Soul Drumming With Ghost Notes",
-   feel:"Heavily Swung Sixteenth Note Feel", perc:["Tambourine On The Backbeat"],
-   bass:"Motown Style Syncopated Melodic Bass Carrying Its Own Counter-Melody, Leaving Space Between Phrases",
-   texture:"Hammond Organ And Tremolo Guitar", counter:"Horn Section Stabs Answering Every Vocal Line", tempo:"84 BPM",
-   struct:["Layered Vocal Doubles In Unison And Octaves","Memorable Repeating Chorus Hook"], mood:["Warm Joyful And Tender"] }},
-
- { n:"Amnesiac cross-rhythm", s:{ anchor:"Amnesiac Era Radiohead", opening:"Opening On Solo Minor Piano Ostinato",
-   arch:"Repeating Piano Ostinato Growing Across The Song", poly:["Three Against Four Cross-Rhythm"],
-   drums:"Loose Jazz Drumming With Ghost Notes And Mallets", bass:"Upright Bass Walking Stepwise",
-   counter:"Ondes Martenot Floating Above", prod:"Nigel Godrich Production", tempo:"92 BPM",
-   mood:["Relentless Hypnotic And Tense"] }},
-
- { n:"Unsettling titles", s:{ anchor:"Unsettling Film Title Sequence Score", opening:"Opening On Solo Chamber Organ",
-   arch:"Repeating Arpeggiated Ostinato Running Continuously Underneath",
-   texture:"Chamber Organ And Celesta Processed Through Tape Degradation", counter:"Musical Saw Counter-Melody",
-   perc:["Tubular Bells And Timpani","Prepared Piano Strikes As Percussion"], drums:"Steady Understated Pulse Underneath",
-   prod:"Cold Digital Reverb", tempo:"88 BPM", mood:["Eerie Beautiful And Ominous"] }},
-
- { n:"Despacito upbeat", s:{ anchor:"Luis Fonsi Despacito Style Latin Pop", opening:"Opening On A Plucked String Riff",
-   drums:"Dembow Reggaeton Groove", poly:["Tresillo Three Three Two Pattern"], perc:["Congas And Bongos","Handclap Layer"],
-   bass:"Deep Round Sub Bass", texture:"Nylon String Guitar And Rhodes Interplay", tempo:"90 BPM",
-   struct:["Short Repeating Hook Returning Between Every Vocal Phrase","Massed Unison Vocal Chorus"], mood:["Sad Song You Can Dance To"] }},
-
- { n:"Austere groove", s:{ anchor:"Austere Minimal Minor Key Groove", opening:"Opening On Drums Alone For The Intro Then Bass Enters",
-   arch:"Very Few Distinct Elements Nothing Extra", drums:"Machine Tight Four On The Floor With A Hard Cracking Snare On Two And Four",
-   feel:"Machine Tight, Everything Locked To The Grid", poly:["Syncopated Vocal Entries Starting Off The Downbeat"],
-   bass:"Syncopated Melodic Bass Ostinato Repeating Unchanged Every Bar As The Main Hook", synthtone:"Warm Analog Juno Pad",
-   prod:"Huge Reverb On Instruments, Dry Vocal", tempo:"117 BPM", mood:["Relentless Hypnotic And Tense"] }},
-
- { n:"Amore crossover", s:{ anchor:"Andrea Bocelli Amore Era Latin Romantic Ballad", opening:"Opening On A Plucked String Riff",
-   arch:"Full Band Playing Together From The First Verse Not Sparse", drums:"Brushed Kit Entering Late And Loosely",
-   perc:["Congas And Bongos"], bass:"Upright Bass Walking Stepwise",
-   counter:"Solo Violin Carrying A Counter-Melody Over Sustained Strings", prod:"David Foster Production", tempo:"78 BPM",
-   struct:["Long Sustained Notes Held Across Bar Lines","Strings Swelling Through The Final Chorus"], mood:["Warm Nostalgic And Tender"] }},
-
- { n:"Boards of Canada", s:{ anchor:"Boards Of Canada Music Has The Right To Children Era",
-   arch:"Minimalist Repeating Cells Accumulating", drums:"Heavy Boom Bap Drum Groove With Huge Room Reverb",
-   synthtone:"Mellotron Tape Flutes And Choir", synthpat:"Analog Synth Drone Swelling And Receding",
-   bass:"Deep Round Sub Bass", prod:"Tape Degraded Textures And Vinyl Crackle", tempo:"84 BPM",
-   mood:["Warm Nostalgic And Tender"] }},
-
- { n:"Talk Talk", s:{ anchor:"Talk Talk Spirit Of Eden Era", opening:"Opening On Solo Chamber Organ",
-   arch:"Instruments Entering One At A Time", drums:"Brushed Kit Entering Late And Loosely",
-   texture:"Hammond Organ And Tremolo Guitar", counter:"Muted Trumpet Counter-Melody",
-   bass:"Upright Bass Walking Stepwise", prod:"Raw Live Room Production", tempo:"76 BPM", mood:["Hushed And Devotional"] }},
-
- { n:"Cliff Martinez", s:{ anchor:"Cliff Martinez Solaris And Drive Era Film Score Style", opening:"Opening On Solo Marimba",
-   arch:"Repeating Arpeggiated Ostinato Running Continuously Underneath", synthpat:"Cascading Arpeggio With Slow Filter Sweep",
-   synthtone:"Warm Analog Juno Pad", drums:"Steady Understated Pulse Underneath", bass:"Deep Round Sub Bass",
-   prod:"Wide Warm Plate Reverb", tempo:"88 BPM", mood:["Awestruck And Uplifting"] }},
-
- { n:"Clint Mansell", s:{ anchor:"Clint Mansell The Fountain Era Film Score Style", opening:"Opening On Solo Minor Piano Ostinato",
-   arch:"Repeating Piano Ostinato Growing Across The Song", counter:"Solo Cello Counter-Melody",
-   drums:"Steady Understated Pulse Underneath", bass:"Deep Round Sub Bass", tempo:"76 BPM",
-   struct:["Builds In Density Not Vocal Intensity","Melodic Economy Few Notes Held Long"], mood:["Yearning And Cathartic"] }},
-
- { n:"Tame Impala (de-hazed)", s:{ anchor:"Tame Impala Currents Era Psychedelic Synth Pop",
-   drums:"Punchy Dry Close-Mic Drums Against Wet Instruments", feel:"In The Pocket, Laid Back Behind The Beat",
-   bass:"Round Warm Fuzz Bass Mixed Forward", synthtone:"Warm Analog Juno Pad", prod:"Warm Analog Production",
-   tempo:"92 BPM", struct:["Memorable Repeating Chorus Hook"], mood:["Bittersweet And Warm"] }},
-
- { n:"Rag'n'Bone soul", s:{ anchor:"Rag'n'Bone Man Human Era Blues Soul", opening:"Opening On Solo Handclaps And Stomps",
-   drums:"Heavy Boom Bap Drum Groove With Huge Room Reverb", perc:["Stomps And Finger Snaps","Handclap Layer"],
-   bass:"Deep Round Sub Bass", texture:"Hammond Organ And Tremolo Guitar", counter:"Guitar Fill Answering Each Vocal Line",
-   tempo:"88 BPM", struct:["Massed Unison Vocal Chorus","Melodic Economy Few Notes Held Long"], mood:["Raw Soulful And Cathartic"] }}
+ {
+  "n": "Reznor film score",
+  "t": "",
+  "v": "Reznor And Ross Film Score Style, Arpeggiated Analog Sequence Beneath Long Sustained Notes, Acoustic Piano Processed Through Tape Degradation, Distorted Sub Bass Under Clean Piano, Minimal Harmonic Movement With Slowly Decaying Textures, Analog Synth Drone Swelling And Receding, Cold Digital Reverb, Alessandro Cortini Modular Synth Textures",
+  "mine": true
+ },
+ {
+  "n": "Reznor extended",
+  "t": "88 BPM",
+  "v": "Reznor And Ross Film Score Style, Arpeggiated Analog Sequence Beneath Long Sustained Notes, Acoustic Piano Processed Through Tape Degradation, Distorted Sub Bass Under Clean Piano, Slowly Decaying Textures, Analog Synth Drone Swelling And Receding, Alessandro Cortini Modular Synth Textures, Cold Digital Reverb, Steady Understated Pulse Underneath, Melodic Economy Few Notes Held Long, Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Builds In Density, No Gaps Between Vocal Lines, Yearning And Cathartic",
+  "mine": true
+ },
+ {
+  "n": "Neo-classical electronic",
+  "t": "90 BPM",
+  "v": "Neo-Classical Electronic, Muted Felt Piano, Modular Synth Polyrhythmic Arpeggios, Swelling Cello Ensemble, Deep Sub-Bass Pulse, Atmospheric Glitch Beats, Rhythmic Momentum, Haunting Spatial Reverb, Cinematic Art Pop",
+  "mine": true
+ },
+ {
+  "n": "Neoclassical 7/8",
+  "t": "90 BPM",
+  "v": "Johann Johannsson And Olafur Arnalds Neoclassical Electronic, Felt Piano Ostinato In Seven Eight Under Four Four Drums, Generative Self-Playing Piano Patterns, String Quartet With Slow Glissandi, Harmonium Drone, Sub Bass Pulse, Granular Textures, Steve Reich Interlocking Phase Patterns, Building Momentum, Restrained And Devastating",
+  "mine": true
+ },
+ {
+  "n": "Despacito latin",
+  "t": "90 BPM",
+  "v": "Latin Pop, Reggaeton, Pop, Despacito Style Latin Pop, Short Repeating Nylon String Guitar Riff As The Main Hook Returning Between Every Vocal Phrase, Dembow Reggaeton Groove, Congas And Bongos, Deep Round Sub Bass, Warm Analog Pad Underneath, Handclap Layer On The Backbeat, Massed Unison Vocal Chorus, Bittersweet Minor Key With A Major Lift, Chromatic Descending Bass Line, Secondary Dominant Into The Chorus, Crisp Warm Modern Production, Builds In Density, No Gaps Between Vocal Lines, Memorable Repeating Chorus Hook, Sensual Warm And Uplifting",
+  "mine": true
+ },
+ {
+  "n": "Viva La Vida",
+  "t": "96 BPM",
+  "v": "Coldplay Viva La Vida Era, Brian Eno Production, Driving Repeating String Ostinato Running Throughout, Short Repeating Synth Hook Line Returning Between Every Vocal Phrase, Church Bells And Timpani, Chiming Delayed Arpeggiated Guitar, Deep Round Sub Bass, Insistent Live Drums With A Tight Pocket, Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Wide Warm Reverb, Builds In Density, Big Memorable Singalong Chorus, Triumphant And Yearning",
+  "mine": true
+ },
+ {
+  "n": "Formidable chanson",
+  "t": "78 BPM",
+  "v": "Electronic, Hip Hop, Pop, Formidable Style Melancholic Chanson Ballad, Intimate Delivery With Clear Diction, Sparse Piano And Accordion Carrying The Main Hook, Warm Analog Synth Pad Underneath, Subtle String Arrangement Entering Late, Deep Round Sub Bass, Restrained Brushed Kit, Melodic Economy Few Notes Held Long, Extended Voicings With Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Warm Reverb, Builds In Density, Wounded Tender And Cinematic, Repetitive Earworm Hook Repeating Throughout",
+  "mine": true
+ },
+ {
+  "n": "Stereo Love",
+  "t": "92 BPM",
+  "v": "Edward Maya Stereo Love Style Romanian Balkan House, Melancholic Accordion Lead Melody Carrying The Main Hook, Four On The Floor Kick With Offbeat Sub Bass, Continuous Sixteenth Note Plucked Synth Arpeggio, Warm Analog Synth Pad Underneath, Shaker And Open Hi-Hat Keeping Constant Motion, Deep Round Sub Bass, Repetitive Earworm Hook Repeating Throughout, Bittersweet Natural Minor With A Major Lift In The Chorus, Chromatic Descending Bass Line, Secondary Dominant Into The Chorus, Wide Reverb And Long Delay Throwback, Crisp Modern Production, Builds In Density, No Gaps Between Vocal Lines, Nostalgic Melancholic And Danceable",
+  "mine": true
+ },
+ {
+  "n": "Gabriel Passion",
+  "t": "86 BPM",
+  "v": "Peter Gabriel Passion Era, Arpeggiated Analog Synth Sequence Running Beneath Long Sustained Notes, Continuous Sixteenth Note Synth Arpeggio, Deep Sub Bass Pulse, Hypnotic Layered Percussion Groove, Warm Analog Synth Drone Swelling And Receding, Bass Clarinet Counter-Melody, Fretless Bass, Wordless Vocal Texture Used As An Instrument, Tape Degraded Texture, Cavernous Reverb With Long Pre-Delay, Melodic Economy Few Notes Held Long, Extended Voicings With Major Sevenths And Suspensions, Chromatic Descending Bass Line, Builds In Density, Devotional Ecstatic And Cinematic",
+  "mine": true
+ },
+ {
+  "n": "Violator synth-pop",
+  "t": "112 BPM",
+  "v": "Synth Pop, Synth-Pop, New Wave, Electronic Rock, Violator Era, Chiming Clean Chorused Electric Guitar Arpeggio As The Main Hook, Deep Analog Synth Bass Moving In Steady Eighth Notes, Sampled Gated Drums With Big Room Reverb, Melancholic Minor Verse Opening Into A Major Key Chorus, Wide Spacious Production, Repeated Note Melody Over Changing Harmony, Melody Holds One Pitch While Chords Move Underneath, Antecedent Phrase Descends Consequent Phrase Rises To Answer It",
+  "mine": true
+ },
+ {
+  "n": "Jarre cosmic",
+  "t": "108 BPM",
+  "v": "Cosmic Synth-Pop, Jean-Michel Jarre Oxygene And Equinoxe Era, Eminent String Ensemble Through Phaser, ARP 2600 Lead With Slow Portamento Glide, Analog Sequencer Arpeggio Running Continuously In Sixteenth Notes, Warm Moog Bass Pulse, Wind And Whoosh Sweeps, Vast Cathedral Reverb, Spacious Cosmic Atmosphere, Minor Modal Harmony Resolving To Open Major",
+  "mine": true
+ },
+ {
+  "n": "Shoegaze post-rock",
+  "t": "110 BPM",
+  "v": "Shoegaze, Post-Rock, Close Second Vocal, Layered Vocalises, Organ Drone, Pizzicato Electric Guitar, Huge Reverb Delayed Arpeggiated Guitar Wall, Distorted Guitar Wall, Washed Stereo Guitars, Soft Analog Pads, Round Melodic Bass, Restrained Organic Drums, Drip Percussion Motif, Tape Ambience, Huge Reverb, Raw Live Production, Cathartic Release, Melodic Bass Line Carrying Its Own Counter-Melody Rather Than Root Notes, Motown Style Syncopated Bass, Round Warm Fuzz Bass Mixed Forward, Bass And Kick Locked In A Tight Pocket, Instrumental Answer Phrase Filling The Space Between Vocal Lines, Guitar Fill Responding To Each Line",
+  "mine": true
+ },
+ {
+  "n": "Orbital exile shoegaze",
+  "t": "",
+  "v": "Drifting Shoegaze Post-Punk Foundation Built On Two Octave-Layered Bass Lines And A Steady Drum Machine Pulse, Grainy Drone Spreading Under The Mix, Dark Bell Pads Hanging Like Shadows, Bright Arpeggiated Bells Cutting Through In The Breakdown, Verses Leaning Toward Trip-Hop And Ambient Textures, Subdued Introspective Lo-Fi Field Recordings Caught In Space, Choruses Tightening Into A Post-Punk Drive With Shoegaze Haze, Searching For Clarity, Outro Dissolving Into Indietronica Chillwave Brightness, Bells Shimmering As The Drone Fades, Cinematic Atmospheric Melancholic Yet Expansive",
+  "mine": true
+ },
+ {
+  "n": "Tame Impala",
+  "t": "92 BPM",
+  "v": "Tame Impala Currents Era Psychedelic Synth Pop, Kevin Parker Production, Warm Vintage Analog Synths And Juno Pads, Melodic Mid-Forward Bass Carrying A Counter-Melody, Punchy Close-Mic Drums With Huge Room Reverb On The Snare, Phaser And Flanger Sweeping Across The Whole Mix, Tape Saturation With Wow And Flutter, Open Voicings With Added Ninths And Major Sevenths, Unusual Chord Movement With Borrowed Chords, Chromatic Bass Movement, Hypnotic Groove, Dreamlike And Melancholic, Memorable Singable Chorus",
+  "mine": true
+ },
+ {
+  "n": "Dreamy folk rock",
+  "t": "",
+  "v": "Dreamy Folk Rock With Airy Guitars, Steady Drums, Cosmic Synth Layers, Uplifting Melody, Hopeful Tone, Atmospheric Expansive Sound",
+  "mine": true
+ },
+ {
+  "n": "Trip-hop art pop",
+  "t": "92 BPM",
+  "v": "Trip-Hop, Art Pop, Chamber Pop, Stacked Harmonies, Clean Guitar Arpeggios, Bowed Vibraphone, Analog Synth Bass, Sidechained Synth Pads, Tape Saturation, Plate Reverb, Gated Snare, Broken Beat Groove Stumbling To Steady, Sensual, Lush",
+  "mine": true
+ },
+ {
+  "n": "Dark dream-folk",
+  "t": "",
+  "v": "Melancholic Dark Dream-Folk With Smooth Groovy Bass, Intimate Fingerpicked Acoustic Guitar, Soft Brushed Drums, Warm Atmospheric Pads, Distant Ambient Electric Guitar Swells, Airy Reverb-Drenched Textures, Subtle Layered Male Harmonies, Hypnotic Groove, Romantic And Dreamy Late-Night Mood",
+  "mine": true
+ },
+ {
+  "n": "Boom bap + guitar solo",
+  "t": "92 BPM",
+  "v": "Boom Bap Hip-Hop, Dusty Kick Snare, Chopped Jazz Piano, Vinyl Crackle, Tape Saturation, Spring Reverb, Filtered Bassline, Muted Horn Stabs, MPC Swing, Syncopated Hi-Hats, Intimate Mono Mix, Sidechain Ducking, Nocturnal Mood, Reflective Tension, Turntable Scratches, Drum Break Loop, Analog Warmth, Twin Guitar Solo Distortion, Masterpiece Emotional Guitar Solo, Extremely Sweet And Heartbreaking Melody, Legendary Crying Guitar Tone, Warm Vintage Tube Amplifier, Very Long Singing Sustain, Slow Expressive Bends, Deep Emotional Vibrato, Stereo Analog Delay, Huge Hall Reverb, Twin Harmony Guitars, Melodic Arena Rock Phrasing, Build Slowly From Silence To A Powerful Emotional Climax",
+  "mine": true
+ },
+ {
+  "n": "Cinematic alt-rock horizon",
+  "t": "",
+  "v": "Modern Cinematic Alternative Rock With An Art-Rock Edge, Minimalist And Atmospheric, Built On Space Rather Than Density, Fingerpicked Electric Guitar With Shimmering Delays, Warm Analog Bass, Restrained Drums That Grow Naturally, Subtle Synth Textures, Distant Ambient Swells, Expressive Lead Guitar That Sings Instead Of Shreds, Arrangement Feeling Like Walking Toward An Unseen Horizon Gradually Expanding Into A Wide Emotional Chorus Without Becoming Heavy, Dynamic Contrast Whisper-To-Wave Energy, Organic Performance No Overproduction, Atmospheric Post-Rock Indie Alternative And Cinematic Modern Rock But Original, Abstract Timeless Mysterious Hopeful Immersive And Emotionally Transformative, Long Instrumental Outro Where Echoing Guitars Bass And Ambient Textures Slowly Dissolve Into Silence",
+  "mine": true
+ },
+ {
+  "n": "Glitch soul",
+  "t": "90 BPM",
+  "v": "Atmospheric Glitch Soul, Warm Rhodes Electric Piano, Deep Sub Bass, Polyrhythmic Organic Percussion, Syncopated Groove, Borrowed Minor Chords, Extended Chord Voicings, Neo-Classical String Quartet, Spacious Reverb, Intimate Storytelling, Haunting And Melancholic",
+  "mine": true
+ },
+ {
+  "n": "Alt R&B synth leads",
+  "t": "",
+  "v": "Alternative R&B, Massive Unusual Synth Leads And Wide Analog Pads, Deep 808 Style Bass, Hard Deep Kick Locking The Groove, Sparse Verses Leaving Space For Tension, Chorus Opening With Layered Harmonies, Sub Drops, Tape Saturation, Gated Reverb Tails For A Heavy Second-Listen Punch",
+  "mine": true
+ },
+ {
+  "n": "Alan Walker EDM",
+  "t": "90 BPM",
+  "v": "Alan Walker Different World Era Melodic EDM Ballad, Sparse Verse With Soft Piano And Sub Bass Only, Filtered Pad Swelling Through The Pre-Chorus, Instrumental Drop With A Bright Plucked Supersaw Lead Carrying The Main Hook, Four On The Floor Kick With Offbeat Bass, Continuous Sixteenth Note Hi-Hat Motion, Sidechain Pumping On Pads And Bass, Pitched Vocal Chop Stabs As A Counter-Melody, Simple Repeating Four Chord Minor Progression With A Major Lift, Cathedral Shimmer Reverb With Long Pre-Delay, Deep Sub Bass, Crisp Modern Mix, Melancholic And Uplifting, Memorable Hummable Instrumental Hook, Sing Along Chorus",
+  "mine": true
+ },
+ {
+  "n": "Suspiria ritual",
+  "t": "90 BPM",
+  "v": "Thom Yorke Suspiria Score And Jonny Greenwood Film Score Style, Modal Piano Ostinato In Seven Eight, Detuned Cello And Dissonant String Clusters Above, Col Legno Strings, Harmony Built On Stacked Fourths Never Resolving, Wordless Choir Distant Underneath, Mellotron And Tape Saturation, Sub Bass Pulse, Sparse Solo Piano Intro Building To Full Ensemble, Ritualistic Forward Motion, Haunting",
+  "mine": true
+ },
+ {
+  "n": "Amnesiac cross-rhythm",
+  "t": "92 BPM",
+  "v": "Amnesiac Era Radiohead, Swung Triplet Piano And Upright Bass Interplay Over Straight Drums, Three Against Four Cross-Rhythm, Chromatic Descending Bass Line, Minor Ninth And Unresolved Suspended Voicings, Ondes Martenot Floating Above, String Arrangement Entering Late And Subtle, Warm Analog Production, Nigel Godrich Style Production, Hypnotic, Never Static",
+  "mine": true
+ },
+ {
+  "n": "Atmospheric electronic ballad",
+  "t": "",
+  "v": "Catchy, Melodic, Repetitive Earworm Melody, Atmospheric Electronic Ballad, Art Pop, Warm Analog Synths, Rhodes Electric Piano, Ondes Martenot, Glitchy Organic Percussion, Deep Sub Bass, Hypnotic Groove, Melancholic And Emotional, Spacious Reverb, Modern Production, Polyrhythmic",
+  "mine": true
+ },
+ {
+  "n": "Baroque orchestral hip-hop",
+  "t": "",
+  "v": "Detuned Classical Piano Motif, Regal Minor Key, Boom Bap Hip-Hop Drums, Deep 808 Bass, Baroque String Ornaments, Dark Opulent Orchestral Hip-Hop",
+  "mine": true
+ },
+ {
+  "n": "OK Computer",
+  "t": "75 BPM",
+  "v": "OK Computer Era Radiohead Atmospheric Alt Rock Ballad, Piano And Clean Electric Guitar Interplay, Chromatic Descending Bass Line, Unusual Chord Movement With Borrowed Minor Chords, Alternative Rock, Electronic, Experimental, Art Rock Style, Layered Harmonies, Subtle String Arrangement, Brushed Drums, Warm Analog Production, Existential And Melancholic Mood Like No Surprises Or Exit Music For A Film, Vocals In Urdu, Cinematic And Heartbroken",
+  "mine": true
+ },
+ {
+  "n": "In Rainbows",
+  "t": "78 BPM",
+  "v": "In Rainbows Era Radiohead Warm Intimate Atmospheric Alt Rock Ballad, Fingerpicked Acoustic Guitar And Warm Piano Interplay, Subtle Electronic Textures Underneath, Alternative Rock, Electronic, Experimental, Art Rock Style, Extended Chord Voicings With Major 7ths And Unresolved Suspensions, Chromatic Bass Movement, Unusual Chord Progressions Avoiding Pop Cliche, Brushed Drums With Polyrhythmic Feel, Warm Reverb, Cinematic And Melancholic, Harmonically Ambiguous Mood Like Nude Or Reckoner",
+  "mine": true
+ },
+ {
+  "n": "Late-night doo-wop",
+  "t": "70 BPM",
+  "v": "Late-Night Blue-Eyed Doo-Wop Ballad, Close-Harmony Backing Vocals With Ooh And Aah Pads, Walking Upright Bass, Brushed Drums With Soft Snare, Gentle Piano Triplets, Warm Tenor Sax Accents, Subtle String Swells On Emotional Peaks, Reverb-Heavy Vintage 1959-1962 Production, Doo-Wop Chord Progression One Six Four Five, Intimate Slow-Dance Feel, Dion And The Belmonts Meets The Skyliners, Achingly Romantic, Nostalgic, Moonlit Ballroom Mood",
+  "mine": true
+ },
+ {
+  "n": "Indie folk soul blue",
+  "t": "",
+  "v": "Catchy, Rhythmic, Melodic, Earworm Melody, Extended Vocal Improvisation, Melancholic Indie Folk Soul Blue Song With A Minor Key, Clean Electric Guitar Playing Arpeggiated Chords, Sustained Synth Pad Providing Atmospheric Backing, Begins With A Sustained Synth Pad Followed By Electric Guitar Entering With An Arpeggiated Chord Progression, Verse-Chorus Structure With A Bridge Section, Clean And Spacious Production, Reverb On Both Vocals And Guitar To Create Depth, Consistent Tempo Throughout",
+  "mine": true
+ },
+ {
+  "n": "Southern soul 6/8",
+  "t": "",
+  "v": "1960s Southern Soul Ballad, Six Eight Rhythm And Blues, Swaying Waltz Groove, Warm Hammond Organ, Clean Electric Guitar Arpeggios, Distant Gentle Horn Section Swell, Raw Vintage Analog Tape Sound, Intimate Laid-Back Storytelling, Intensely Emotional Pleading, Narrow Melodic Pocket, Zero Belting",
+  "mine": true
+ },
+ {
+  "n": "Baroque pop wall of sound",
+  "t": "",
+  "v": "1960s Baroque Pop, Lush Orchestral Surf Ballad, Wrecking Crew Wall Of Sound, Intricate Instrumentation, Harpsichord, Sleigh Bells, Warm Muted Bass, Gentle Picked Electric Guitar, Stacked Five-Part Vocal Harmony Pads, Vintage Analog Tape Warmth, Close-Mic Melancholy Storytelling, Intimate Conversational Delivery, Massive Five-Part Background Harmonies Answering The Lead, 808 Style Sub Bass, Strummed Acoustic Guitar With Electric Guitar Textures Throughout, Subtle Percussion, No Tabla, Emotional, Romantic, Spiritual Vibe, Chorus Explodes With Powerful Drums",
+  "mine": true
+ },
+ {
+  "n": "Waltz melodic soul",
+  "t": "",
+  "v": "Minor Key, Rhythmic Three Four Waltz Ballad, Melodic Soul, Emotional, Pop, Romantic And Melancholic And Sad, Strings, Gentle Piano, In Three Four Time, Classical Influenced, Repetitive Earworm Melody",
+  "mine": true
+ },
+ {
+  "n": "Adnan Dhool pop ballad",
+  "t": "",
+  "v": "Pop, Rhythmic, Electric, Pop Rock, Acoustic, Pop Rock, Strummed Acoustic Guitar With Electric Guitar Textures Throughout, Pakistani Pop Ballad Inspired By Adnan Dhool From Soch, In D Major, Repetitive Raag-Yaman-Inspired Verse Melody With Hypnotic Refrain, Minimal Instrumentation, Subtle Percussion, Emotional, Romantic, Spiritual Vibe, Chorus Explodes With Powerful Drums",
+  "mine": true
+ },
+ {
+  "n": "Ghazal pop rock",
+  "t": "",
+  "v": "Restrained Tablas, Pop, Rhythmic, Electric, Pop Rock Ghazal, Acoustic, Pop Rock, 808 Style Sub Bass, Ghazal,  Strummed Acoustic Guitar With Electric Guitar Textures Throughout",
+  "mine": true
+ },
+ {
+  "n": "Modern synthwave",
+  "t": "",
+  "v": "Modern Synthwave, Rhythmic, Melodic, Catchy Earworm Melody",
+  "mine": true
+ },
+ {
+  "n": "Soul folk sparse",
+  "t": "",
+  "v": "Soul, Folk, Simple, Sparse, Rhythmic, Melodic, Catchy, Earworm Melody",
+  "mine": true
+ },
+ {
+  "n": "Folk soul 808",
+  "t": "",
+  "v": "Modern Folk Soul, Atmospheric, Melodic, Rhythmic, Catchy, Earworm Melody, Wide Clean Electric Guitars Drenched In Reverb And Delay, Deep 808 Style Bass, Deep Kick, Bass Boost",
+  "mine": true
+ },
+ {
+  "n": "Cinematic country ballad",
+  "t": "90 BPM",
+  "v": "Driving Cinematic Country Ballad, Ambient Folk, Post-Rock Crescendo, Galloping Acoustic Guitar Fingerpicking, Pedal Steel Swells, Train Beat, Orchestral Strings, Emotional, Hans Zimmer Style, Slow Build, Raw Production",
+  "mine": true
+ },
+ {
+  "n": "Waltz stadium ballad",
+  "t": "",
+  "v": "Three Four Waltz Ballad, Romantic And Melancholic And Sad, Strings, Gentle Piano, Cinematic Electric Guitar Textures With Stadium Reverb And Delay, In Three Four Time, Classical Influenced",
+  "mine": true
+ },
+ {
+  "n": "12/8 soul power ballad",
+  "t": "",
+  "v": "Twelve Eight Triplet Groove, Soul Power Ballad, Doo-Wop Rhythm, Emotional, Melodic, Catchy, Rhythmic, 808 Style Sub Bass, Strummed Acoustic Guitar With Electric Guitar Textures Throughout, Subtle Percussion, No Tabla, Emotional, Romantic, Spiritual Vibe, Chorus Explodes With Powerful Drums",
+  "mine": true
+ },
+ {
+  "n": "Ethereal indie pop",
+  "t": "",
+  "v": "Ethereal Indie Pop, Extreme Wide LCR Panning, Shimmering High-Pitched Synths, Cloud-Like Pads, Rhythmic Delay Guitars, Bright Stadium Reverb On Sides, Totally Empty Center, Uplifting, Sparkling",
+  "mine": true
+ },
+ {
+  "n": "Rag'n'Bone soul",
+  "t": "88 BPM",
+  "v": "Rag'n'Bone Man Human Era Blues Soul, Opening On Solo Handclaps And Stomps With No Piano, Short Repeating Vocal Hook Returning Between Every Vocal Phrase, Heavy Boom Bap Drum Groove With Huge Room Reverb, Deep Round Sub Bass, Sparse Blues Electric Guitar Stabs Answering Every Vocal Line, Hammond Organ Underneath, Gospel Choir Backing In Unison And Octaves On The Chorus, Handclap And Stomp Layer, Melodic Economy Few Notes Held Long, Minor Key With Borrowed Major Chords, Secondary Dominants And Chromatic Descending Bass Line, Warm Analog Production, Builds In Density, Raw Soulful And Cathartic",
+  "mine": true
+ },
+ {
+  "n": "Vintage soul",
+  "t": "84 BPM",
+  "v": "Vintage Soul Ballad With Modern Adult Contemporary Production, Long Sustained Notes Held Across Bar Lines, Full Band Playing Together From The First Verse Not Sparse, In The Pocket Soul Drumming With Tambourine On The Backbeat, Shuffled Sixteenth Note Feel, Motown Style Syncopated Melodic Bass Carrying Its Own Counter-Melody, Wurlitzer And Hammond Organ Underneath, Warm Piano And Clean Electric Guitar Interplay, Horn Section Stabs Answering Every Vocal Line, Lush String Section Entering In The Second Verse, Layered Backing Vocals In Unison And Octaves, Extended Voicings With Major Sevenths And Added Ninths, Secondary Dominants And Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Builds In Density, Warm Joyful And Tender",
+  "mine": true
+ },
+ {
+  "n": "Foster AC ballad",
+  "t": "84 BPM",
+  "v": "David Foster Production Adult Contemporary Pop Ballad, Long Sustained Notes Held Across Bar Lines, Full Band Arrangement Playing Together From The First Verse Not Sparse, Warm Piano And Fingerpicked Acoustic Guitar Interplay, Round Melodic Electric Bass, Soft Live Drum Kit With A Steady Backbeat, Lush String Section Entering In The Second Verse, Short Repeating Piano Figure As The Main Hook Returning Between Every Vocal Phrase, Layered Backing Vocals In Unison And Octaves, Extended Voicings With Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Warm Analog Production, Builds In Density, No Gaps Between Vocal Lines, Warm Nostalgic And Tender",
+  "mine": true
+ },
+ {
+  "n": "Amore crossover",
+  "t": "78 BPM",
+  "v": "Andrea Bocelli Amore Era Latin Romantic Ballad, David Foster Production, Legato Phrasing, Long Sustained Notes Held Across Bar Lines, Short Repeating Nylon String Spanish Guitar Figure As The Main Hook Returning Between Every Vocal Phrase, Sweeping Orchestral String Section, Warm Piano, Bolero Rhythm With Brushed Kit And Soft Congas, Upright Bass, Extended Voicings With Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Lush Wide Reverb, Builds In Orchestral Weight, No Gaps Between Vocal Lines, Romantic Yearning And Cinematic",
+  "mine": true
+ },
+ {
+  "n": "Her score",
+  "t": "80 BPM",
+  "v": "Owen Pallett And Arcade Fire Her Score Style, Arpeggiated Analog Synth Sequence Running Beneath Long Sustained Notes, Continuous Sixteenth Note Synth Arpeggio, Warm Analog Synth Pad Swelling And Receding, Deep Round Sub Bass Pulse, Gentle Piano Figure Repeating Above The Sequence, Warm String Section Entering Late, Pizzicato Strings Answering The Vocal, Restrained Brushed Kit, Tape Degraded Texture, Melodic Economy Few Notes Held Long, Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Builds In Density, No Gaps Between Vocal Lines, Warm Hopeful And Tender",
+  "mine": true
+ },
+ {
+  "n": "Beck Sea Change",
+  "t": "82 BPM",
+  "v": "Beck Sea Change Era, Nigel Godrich Production, Melancholic Acoustic Song Wrapped In Warped Electronic Texture, Fingerpicked Acoustic Guitar And Warm Piano Interplay, Detuned String Arrangement Swelling Underneath, Tape Degraded Textures And Vinyl Crackle, Warm Analog Synth Drone, Round Melodic Bass, Restrained Live Drums With A Loping Feel, Melodic Economy Few Notes Held Long, Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence",
+  "mine": true
+ },
+ {
+  "n": "Cliff Martinez",
+  "t": "88 BPM",
+  "v": "Cliff Martinez Solaris And Drive Era Film Score Style, Warm Analog Synth Arpeggio Pulsing Beneath Long Sustained Notes, Cristal Baschet Glass Rod Tones, Steel Drum And Marimba Textures With Long Shimmering Decay, Bowed Vibraphone, Warm Analog Pad Swelling And Receding, Deep Round Sub Bass, Wide Spacious Reverb, Steady Understated Pulse Underneath, Melodic Economy Few Notes Held Long, Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Builds In Density, No Gaps Between Vocal Lines, Warm Yearning And Oceanic",
+  "mine": true
+ },
+ {
+  "n": "Clint Mansell",
+  "t": "76 BPM",
+  "v": "Clint Mansell The Fountain Era Film Score, Melodic Economy Few Notes Held Long, Repeating Piano Ostinato Growing Across The Song, String Quartet Playing The Counter-Melody, Solo Cello Above A Sustained String Bed, Warm Analog Synth Arpeggio Underneath, Restrained Live Drums Entering Late, Extended Voicings With Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Picardy Third At The Final Cadence, Warm Analog Production, Continuous Eighth Note Motion, Builds In Orchestral Weight, Yearning And Cathartic",
+  "mine": true
+ },
+ {
+  "n": "Unsettling titles",
+  "t": "88 BPM",
+  "v": "Unsettling Film Title Sequence Score, Minor Major Seventh Chords, Augmented Triads Used As Pivots, Chromatic Mediant Chord Movement Between Keys A Third Apart, Half Diminished Seventh Voicings Left Unresolved, Planing Parallel Chords With No Functional Resolution, Octatonic Melodic Movement, Celesta And Tremolo Strings, Col Legno String Clusters, Muted Brass, Prepared Piano, Repeating Ostinato Under Shifting Harmony, Pedal Point With Clashing Chords Above, Cold Wide Reverb, Eerie Beautiful And Ominous",
+  "mine": false
+ },
+ {
+  "n": "Austere groove",
+  "t": "117 BPM",
+  "v": "Austere Minimal Minor Key Groove, Opening On Drums Alone For The Intro Then Bass Enters, Machine Tight Four On The Floor Kick With A Hard Cracking Snare On Two And Four, Closed Hi-Hat Playing Steady Eighth Notes, Dry Close-Mic Gated Drums With Almost No Reverb, Syncopated Melodic Bass Ostinato Repeating Unchanged Every Bar As The Main Hook, Kick And Bass Locked In A Deep Pocket, Very Few Distinct Elements Nothing Extra, Cold Analog Synth Pad Held Long Underneath, Syncopated Vocal Entries Off The Downbeat, Two Chord Minor Vamp, Relentless Hypnotic And Tense",
+  "mine": false
+ },
+ {
+  "n": "Boards of Canada",
+  "t": "84 BPM",
+  "v": "Boards Of Canada Music Has The Right To Children Era, Degraded Tape Warmth And Vinyl Crackle, Detuned Analog Synth Melody Wavering In Pitch, Warm Mellotron Pad, Hypnotic Repeating Loop Growing Slowly, Muffled Downtempo Drum Break, Deep Round Sub Bass, Distant Field Recording Textures, Major Sevenths And Added Ninths, Chromatic Descending Bass Line, Wide Warm Reverb, Nostalgic Hazy And Melancholic",
+  "mine": false
+ },
+ {
+  "n": "Talk Talk",
+  "t": "76 BPM",
+  "v": "Talk Talk Spirit Of Eden Era, Sparse Improvised Chamber Rock, Long Silences Broken By Single Instruments, Hammond Organ Swelling And Receding, Muted Trumpet And Bass Clarinet Answering The Vocal, Upright Bass, Brushed Kit Entering Late And Loosely, Acoustic Guitar Played Very Quietly, Extended Voicings With Major Sevenths And Unresolved Suspensions, Chromatic Descending Bass Line, Hushed Devotional And Cathartic",
+  "mine": false
+ }
 ];
 
 function applyPreset(pre){
   MODULES.forEach(m => {
     if (m.id === "exclude") return;              // keep the user's exclusions
-    const v = pre.s[m.id];
-    if (m.type === "chips") state[m.id] = Array.isArray(v) ? v.slice() : [];
-    else state[m.id] = typeof v === "string" ? v : "";
+    state[m.id] = m.type === "chips" ? [] : "";
   });
-  syncUI(); render();
+  state.__extra = "";
+  baseText = pre.v;
+  baseName = pre.n;
+  state.tempo = pre.t || "";
+  syncUI(); render(); updateBadge(); renderBaseChips();
 }
+
+document.getElementById("restoreBtn").addEventListener("click", () => {
+  const pre = PRESETS.find(x => x.n === baseName);
+  if (pre) applyPreset(pre);
+});
+
+document.getElementById("detachBtn").addEventListener("click", () => {
+  baseTags = null; baseName = "";
+  document.querySelectorAll(".preset").forEach(x => x.classList.remove("loaded"));
+  render(); updateBadge(); renderBaseChips();
+});
+
+const rawT = document.getElementById("rawToggle");
+const rawA = document.getElementById("baseRaw");
+if (rawT) rawT.addEventListener("click", () => {
+  const showing = rawA.style.display !== "none";
+  rawA.style.display = showing ? "none" : "";
+  rawT.textContent = showing ? "Edit as text" : "Done editing";
+  document.getElementById("basechips").style.display = showing ? "" : "none";
+  if (!showing) rawA.value = baseTags ? baseTags.join(", ") : "";
+});
+if (rawA) rawA.addEventListener("input", e => {
+  baseTags = splitTags(e.target.value);
+  render();
+});
 
 const pbar = document.getElementById("presetbar");
 PRESETS.forEach(pre => {
   const b = document.createElement("button");
-  b.type = "button"; b.className = "preset"; b.textContent = pre.n;
+  b.type = "button"; b.className = "preset" + (pre.mine ? "" : " draft"); b.textContent = pre.n;
+  if (!pre.mine) b.title = "Claude draft — not one of your verified prompts";
   b.addEventListener("click", () => {
     applyPreset(pre);
     document.querySelectorAll(".preset").forEach(x => x.classList.remove("loaded"));
     b.classList.add("loaded");
     window.scrollTo({ top:0, behavior:"smooth" });
   });
+  b.dataset.name = pre.n.toLowerCase();
+  b.dataset.body = pre.v.toLowerCase();
   pbar.appendChild(b);
+});
+
+const pf = document.getElementById("presetFilter");
+if (pf) pf.addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  const sub = (needle, hay) => {           // subsequence match: "rzn" finds "reznor"
+    let i = 0;
+    for (const ch of hay) { if (ch === needle[i]) i++; if (i === needle.length) return true; }
+    return needle.length === 0;
+  };
+  const words = q.split(/\s+/).filter(Boolean);
+  document.querySelectorAll(".preset").forEach(b => {
+    const hay = b.dataset.name + " " + b.dataset.body;
+    const hit = !q || words.every(w => hay.includes(w)) || sub(q.replace(/\s+/g,""), b.dataset.name);
+    b.style.display = hit ? "" : "none";
+  });
 });
 
 /* tabs */
