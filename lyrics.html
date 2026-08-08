@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lyric Workbench</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lyrics">
+<meta name="theme-color" content="#2A2D31">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%232A2D31'/%3E%3Crect x='30' y='34' width='120' height='112' rx='4' fill='%23E6E2D8'/%3E%3Crect x='44' y='54' width='60' height='6' rx='3' fill='%232A2D31'/%3E%3Crect x='44' y='70' width='84' height='6' rx='3' fill='%232A2D31' opacity='.6'/%3E%3Crect x='44' y='86' width='40' height='6' rx='3' fill='%23E8552D'/%3E%3Crect x='44' y='102' width='72' height='6' rx='3' fill='%232A2D31' opacity='.6'/%3E%3Crect x='44' y='118' width='30' height='6' rx='3' fill='%23F2A93B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --panel:#2A2D31; --panel-hi:#34383D; --panel-lo:#212429; --edge:#43484E;
+  --silk:#9BA2A9; --silk-dim:#6E757C; --cream:#E6E2D8;
+  --amber:#F2A93B; --amber-dim:#7A5A22; --lcd-bg:#171A15;
+  --red:#E8552D; --green:#6FBF8B; --blue:#5FA8D3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--panel-lo);color:var(--cream);
+  font-family:'Barlow','Helvetica Neue',system-ui,sans-serif;font-size:15px;line-height:1.45;
+  padding-bottom:calc(3rem + env(safe-area-inset-bottom));
+}
+.wrap{max-width:960px;margin:0 auto;padding:0 calc(14px + env(safe-area-inset-left)) 0 calc(14px + env(safe-area-inset-right))}
+.silk{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.14em;font-weight:600;color:var(--silk);font-size:11px}
+header{border-bottom:1px solid var(--edge);background:var(--panel);padding:calc(14px + env(safe-area-inset-top)) 0 12px}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;font-size:26px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase}
+.brand .sub{color:var(--silk-dim);font-size:12px;letter-spacing:.08em}
+
+textarea#src{
+  width:100%;min-height:230px;margin-top:14px;
+  font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:13px;line-height:1.75;
+  background:var(--lcd-bg);color:var(--cream);border:1px solid #0C0E0A;border-radius:3px;
+  padding:12px;resize:vertical;
+}
+textarea#src:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+
+.btnrow{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center}
+button.act{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.12em;font-weight:600;font-size:12px;background:var(--panel-hi);color:var(--cream);
+  border:1px solid var(--edge);border-radius:2px;padding:9px 14px;cursor:pointer;transition:.15s}
+button.act:hover{background:#3D4248}
+button.act:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+button.act.primary{background:var(--red);border-color:var(--red);color:#fff}
+button.act.ok{background:var(--green);border-color:var(--green);color:#12261A}
+button.act[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#1B1508}
+.savenote{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.12em;font-size:10.5px;color:var(--silk-dim)}
+
+.tabs{display:flex;border-bottom:1px solid var(--edge);margin-top:18px;overflow-x:auto}
+.tab{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.14em;font-weight:600;font-size:12.5px;background:none;border:none;
+  border-bottom:2px solid transparent;color:var(--silk-dim);padding:10px 15px;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* line analysis */
+.lines{margin-top:14px;display:grid;gap:2px}
+.ln{display:grid;grid-template-columns:38px 1fr auto;gap:9px;align-items:start;
+  padding:5px 8px;border-radius:2px;background:var(--panel);border:1px solid transparent}
+.ln:hover{border-color:var(--edge)}
+.ln.sect{background:transparent;border:none;padding-top:12px}
+.ln.blank{background:transparent;border:none;min-height:6px;padding:0}
+.syl{font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:11px;color:var(--silk-dim);
+  text-align:right;padding-top:2px}
+.bar{height:4px;background:var(--amber);border-radius:2px;margin-top:6px;opacity:.75}
+.txt{font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:12.5px;word-break:break-word}
+.txt em{font-style:normal;background:rgba(232,85,45,.28);border-radius:2px;padding:0 2px}
+.txt b{font-weight:400;background:rgba(242,169,59,.22);border-radius:2px;padding:0 2px}
+.tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:190px}
+.t{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.1em;font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:2px;white-space:nowrap}
+.t.hold{background:rgba(111,191,139,.18);color:var(--green)}
+.t.stop{background:rgba(232,85,45,.2);color:var(--red)}
+.t.mid{background:rgba(95,168,211,.18);color:var(--blue)}
+.t.warn{background:rgba(242,169,59,.2);color:var(--amber)}
+.sectlabel{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.16em;font-size:11px;font-weight:600;color:var(--amber)}
+
+.summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;margin-top:14px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:3px;padding:10px 11px}
+.card .k{font-family:'Barlow Condensed','Avenir Next Condensed',sans-serif;text-transform:uppercase;
+  letter-spacing:.13em;font-size:10px;color:var(--silk-dim);display:block;margin-bottom:3px}
+.card .v{font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:17px;color:var(--amber)}
+.card .v.small{font-size:12.5px;line-height:1.4;color:var(--cream)}
+
+.check{display:grid;gap:7px;margin-top:12px}
+.chk{display:grid;grid-template-columns:22px 1fr;gap:9px;align-items:start;
+  background:var(--panel);border:1px solid var(--edge);border-radius:3px;padding:10px 11px}
+.chk .mark{font-family:'JetBrains Mono',monospace;font-size:14px;line-height:1.3}
+.chk.yes{border-left:3px solid var(--green)} .chk.yes .mark{color:var(--green)}
+.chk.no{border-left:3px solid var(--silk-dim)} .chk.no .mark{color:var(--silk-dim)}
+.chk .lab{font-size:13.5px}
+.chk .hint{font-size:12px;color:var(--silk-dim);margin-top:3px;max-width:66ch}
+
+.bank{margin-top:16px}
+.bank .silk{display:block;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:'JetBrains Mono','SF Mono',Menlo,monospace;font-size:12px;
+  background:var(--panel);color:var(--cream);border:1px solid var(--edge);border-radius:2px;
+  padding:6px 10px;cursor:pointer;transition:.13s}
+.chip:hover{background:var(--panel-hi);border-color:var(--silk-dim)}
+.chip.copied{background:var(--green);border-color:var(--green);color:#12261A}
+select{width:100%;max-width:340px;font-family:'Barlow',sans-serif;font-size:14px;background:var(--panel-lo);
+  color:var(--cream);border:1px solid var(--edge);border-radius:2px;padding:9px;cursor:pointer;margin-bottom:10px}
+.note{font-size:12.5px;color:var(--silk-dim);font-style:italic;max-width:66ch;margin-bottom:8px}
+.hidden{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){
+  .brand h1{font-size:21px}
+  .ln{grid-template-columns:32px 1fr;}
+  .tags{grid-column:1 / -1;justify-content:flex-start;max-width:none;margin-top:4px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap brand">
+    <h1>Lyric Workbench</h1>
+    <span class="sub">Roman Urdu · for Suno</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <textarea id="src" spellcheck="false" placeholder="Paste Roman Urdu lyrics here. Use [Verse] / [Chorus] on their own lines — they're skipped in the counts."></textarea>
+  <div class="btnrow">
+    <button class="act primary" id="copyOut">Copy for Suno</button>
+    <button class="act" id="hyphBtn" aria-pressed="false">Syllable hyphens</button>
+    <button class="act" id="applyBtn">Apply to sheet</button>
+    <button class="act" id="undoBtn" style="display:none">Undo</button>
+    <button class="act" id="clearBtn">Clear</button>
+    <span class="savenote" id="savenote"></span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="lines">Lines</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="checks">Checklist</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="bank">Word bank</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="snip">Structure</button>
+  </div>
+
+  <section id="p-lines">
+    <div class="summary" id="summary"></div>
+    <div class="lines" id="lines"></div>
+  </section>
+
+  <section id="p-checks" class="hidden">
+    <p class="note" style="margin-top:14px">The mechanical passes — the things easy to forget on a first read.</p>
+    <div class="check" id="checks"></div>
+  </section>
+
+  <section id="p-bank" class="hidden">
+    <p class="note" style="margin-top:14px">Pick a field you haven't mined yet and draw this song's imagery <em>and verbs</em> from it. Tap any word to copy.</p>
+    <select id="fieldSel" aria-label="Lexical field"></select>
+    <div id="bankwrap"></div>
+  </section>
+
+  <section id="p-snip" class="hidden">
+    <div id="snipwrap"></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* ============================ SYLLABLES ============================ */
+/* Roman Urdu approximation: collapse known digraphs, then count vowel groups. */
+const DIGRAPHS = ["aa","ee","oo","ai","au","ay","aw","ei","ou","oi"];
+function syllables(word){
+  let w = word.toLowerCase().replace(/[^a-z']/g,"");
+  if (!w) return 0;
+  DIGRAPHS.forEach(d => { w = w.split(d).join("A"); });
+  const m = w.match(/[aeiouA]/g);
+  let n = m ? m.length : 0;
+  if (n === 0 && w.length) n = 1;          // consonant-only cluster still voiced
+  return n;
+}
+function lineSyllables(line){
+  return line.split(/[\s\u2013\u2014-]+/).filter(Boolean)
+    .reduce((a,w) => a + syllables(w), 0);
+}
+
+/* ============================ SYLLABIFY ============================ */
+/* Consonant digraphs that must never be split (aspirates, sibilants). */
+const CDIG = ["chh","bh","ph","th","dh","kh","gh","jh","ch","sh","zh","rh","lh"];
+function segment(word){
+  const segs = [];                     // {c:"v"|"c", s:"..."}
+  let i = 0;
+  const w = word;
+  while (i < w.length){
+    const two3 = w.slice(i,i+3).toLowerCase();
+    const two  = w.slice(i,i+2).toLowerCase();
+    if (CDIG.includes(two3)) { segs.push({c:"c", s:w.slice(i,i+3)}); i+=3; continue; }
+    if (CDIG.includes(two))  { segs.push({c:"c", s:w.slice(i,i+2)}); i+=2; continue; }
+    if (DIGRAPHS.includes(two)) {
+      // a y/w-final digraph before another vowel is really vowel + glide: ga-ya, not gay-a
+      const glide = /[yw]$/i.test(two) && /[aeiou]/i.test(w[i+2] || "");
+      const finalYE = /[yw]$/i.test(two) && i+2 === w.length-1 && /e/i.test(w[i+2]||"");
+      if (finalYE) { segs.push({c:"v", s:w.slice(i,i+3)}); i+=3; continue; }   // aye, oye
+      if (glide) { segs.push({c:"v", s:w[i]}); segs.push({c:"c", s:w[i+1]}); i+=2; continue; }
+      segs.push({c:"v", s:w.slice(i,i+2)}); i+=2; continue;
+    }
+    const ch = w[i];
+    if (/[aeiouAEIOU]/.test(ch)) segs.push({c:"v", s:ch});
+    else segs.push({c:"c", s:ch});
+    i++;
+  }
+  return segs;
+}
+function hyphenateWord(word){
+  if (!/[a-z]/i.test(word)) return word;
+  if (word.includes("-")) return word;   // already split — leave it
+  const segs = segment(word);
+  const nuclei = [];
+  segs.forEach((g,i)=>{ if (g.c === "v") nuclei.push(i); });
+  if (nuclei.length < 2) return word;
+  const breaks = new Set();            // index of segment that STARTS a new syllable
+  for (let k = 0; k < nuclei.length - 1; k++){
+    const a = nuclei[k], b = nuclei[k+1];
+    const gap = b - a - 1;             // consonants between the two nuclei
+    if (gap === 0)      breaks.add(b);           // hu-e
+    else if (gap === 1) breaks.add(b - 1);       // na-zaa-ron  (single C onsets the next)
+    else                breaks.add(a + 2);       // rosh-ni     (first C closes, rest onset)
+  }
+  let out = "";
+  segs.forEach((g,i)=>{ if (breaks.has(i) && out) out += "-"; out += g.s; });
+  return out;
+}
+function hyphenateLine(line){
+  const tr = line.trim();
+  if (!tr) return line;
+  if (/^\[.*\]$/.test(tr) || /^\(.*\)$/.test(tr)) return line;              // section / delivery tags
+  if (/^[aeiouh]{3,}[\u2026.]*$/i.test(tr.replace(/\s/g,""))) return line;    // alaap lines
+  // protect any inline [tag] or (cue), hyphenate the rest
+  return line.split(/(\[[^\]]*\]|\([^)]*\))/g).map(chunk => {
+    if (/^[\[(]/.test(chunk)) return chunk;
+    return chunk.replace(/[A-Za-z'\u2019-]+/g, tok =>
+      tok.split("-").map(part => hyphenateWord(part)).join("-"));
+  }).join("");
+}
+function hyphenateText(t){ return t.split("\n").map(hyphenateLine).join("\n"); }
+
+/* ============================ QAFIYA HOLD ============================ */
+function holdability(line){
+  const words = line.replace(/[^\w'\s]/g," ").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  const w = words[words.length-1].toLowerCase();
+  if (/[aeiou]$/.test(w)) return {grade:"hold", label:"open vowel", why:"Can be held, bent and ornamented for as long as you like."};
+  if (/[aeiou](n|m|ñ)$/.test(w)) return {grade:"hold", label:"nasal", why:"Sustains well — the nasal keeps ringing."};
+  if (/[aeiou]h$/.test(w)) return {grade:"mid", label:"breath", why:"Holds, but thins out. Fine mid-song, weak as a final qafiya."};
+  if (/[aeiou](l|r)$/.test(w)) return {grade:"mid", label:"sonorant", why:"Some sustain. Usable but not a note you can swell."};
+  if (/[bcdfghjkpqstvwxyz]{2,}$/.test(w)) return {grade:"stop", label:"cluster", why:"Cuts the note dead. Avoid on a line you want to hold or ornament."};
+  return {grade:"stop", label:"stopped", why:"Closes the note. Fine for a clipped line, wrong for a sustained one."};
+}
+
+/* ============================ REGISTER FLAGS ============================ */
+const OVERUSED = ["chehra","chehre","surat","aasman","aasmaan","falak","deewaar","deewar","khamoshi","sukoot",
+ "sannaata","sannata","baat","baatein","dil","saans","saanson","dam","nazar","nigah","nigaah","chiraagh","chirag",
+ "aaina","aaine","naqaab","naqab","tanhaai","tanhai","raaz","wujood","zaat","jaan","hasti","intezaar","intzaar"];
+const PERFECTIVE = ["reh gaya","kho gaya","ghul gaya","bikhar gaya","so gaya"];
+const REJECTED = ["chinta","lagbhag","kathin","chai","kutta","bhaunkna","chimni","be-sura","besura",
+ "dawaam","baqa","qayaam"];
+const HABITUAL = /\b(ta|ti|te)\s+(hai|hain|hoon|ho)\s*[.,!?]?$/i;
+const VERBISH = /\b(hai|hain|hoon|ho|tha|thi|thay|the|gaya|gayi|gaye|liya|liye|diya|kiya|hua|hui|hue|raha|rahi|rahe|jaana|karo|karein|kare|suno|sunain|dekho|aao|jao|ruko|raho|hoga|hogi|honge|na tha|nahin)\b/i;
+
+function flags(line){
+  const out = [];
+  const low = " " + line.toLowerCase().replace(/[^\w\s'-]/g," ") + " ";
+  const hitsO = OVERUSED.filter(w => low.includes(" "+w+" "));
+  const hitsP = PERFECTIVE.filter(w => low.includes(" "+w+" "));
+  const hitsR = REJECTED.filter(w => low.includes(" "+w+" "));
+  if (hitsR.length) out.push({cls:"stop", t:"register", why:"Rejected register: " + hitsR.join(", ")});
+  if (hitsO.length) out.push({cls:"warn", t:"overused", why:"Comfort-zone word: " + hitsO.join(", ") + ". Rotate to a fresh field."});
+  if (hitsP.length) out.push({cls:"warn", t:"perfective", why:"Over-used perfective: " + hitsP.join(", ")});
+  if (HABITUAL.test(line.trim())) out.push({cls:"stop", t:"habitual", why:"Flat habitual close (\u2011ta/ti/te hai). Invert to land on an image-noun, or use a vivid perfective."});
+  if (!VERBISH.test(line)) out.push({cls:"mid", t:"no verb", why:"No finite verb or auxiliary found. Fine if this line lands on the qafiya noun with the verb mid-line \u2014 otherwise the copula may be missing."});
+  if (/\bkabhi\b.*\bkabhi\b/i.test(line)) out.push({cls:"warn", t:"kabhi/kabhi", why:"Over-used construction."});
+  if (/\bna\b\s+\S+\s+\bna\b/i.test(line)) out.push({cls:"warn", t:"na X na Y", why:"Over-used construction \u2014 chorus only, never verse."});
+  return {out, hitsO:hitsO.concat(hitsP), hitsR};
+}
+
+/* ============================ WORD BANKS ============================ */
+const FIELDS = {
+ "Music / saaz":["saaz","sur","goonj","sada","naghma","taan","lai","aahang","sargam","mizraab","tarannum","zamzama","alaap","raagni"],
+ "Textile / taana-baana":["taana-baana","reshm","silvat","daaman","taar","gireh","chunri","bunna","tukma","kinaara","jhaalar","udhedna"],
+ "Trade & debt":["qarz","sood","hisaab","khota sikka","mol","mizaan","taraazu","sauda","baaqi","udhaar","tijaarat","naqd"],
+ "Astronomy":["hilaal","kahkashaan","girahan","qutb-taara","mah-taab","shafaq","falak-bosi","zohra","suhail","madd-o-jazr"],
+ "Thirst & water":["tishnagi","sarab","bhanwar","mauj","saahil","qatra","darya","aab-juu","girdaab","josh-e-mauj"],
+ "Fire & ash":["sharar","akhgar","raakh","sulagna","alaav","dhuaan","chingaari","bhabhakna","suraahi-e-aatish"],
+ "Masonry":["neev","khisht","gaara","darz","dahleez","malbah","mem'aar","chaukhat","raushandaan","seelan"],
+ "Cinema & story":["pardah","kirdaar","kahani","manzar","silsila","tamashai","sada","jhalak","parde ke peechhe"],
+ "Fresh synonyms":["rukh","jabeen","aariz","chashm","deeda","sukhan","kalaam","shama","lau","qandeel","khudi","aas","chashm-baraah"],
+ "Roads & travel":["raahguzar","manzil","qaafila","gard-e-safar","paidal","mor","pagdandi","zaad-e-raah"],
+ "Birds & flight":["parwaaz","shahpar","aashiyan","qafas","baal-o-par","tair","uraan","hijrat"],
+ "Seasons & harvest":["fasl","khirman","baadal","saawan","paala","kaasht","bo'na","paidaawar","bahaar-e-na-tamaam"]
+};
+
+/* ============================ STRUCTURE SNIPPETS ============================ */
+const SNIPS = [
+ {label:"Flourishes — these are structural, Suno must obey them",
+  items:["aaaa….","oooo….","aaaaaaaa….","haaaaye….","…"]},
+ {label:"Section markers",
+  items:["[Intro]","[Verse]","[Pre-Chorus]","[Chorus]","[Post-Chorus]","[Hook]","[Bridge]","[Outro]","[Instrumental]","[Instrumental Break]","[End]"]},
+ {label:"Local arrangement cues",
+  items:["[Strings Swell]","[Drum Fill]","[Silence]","[Sparse Piano]","[Full Band Enters]","[Drums Drop Out]","[Build]","[Half Time]"]},
+ {label:"Delivery cues",
+  items:["(softly)","(whispered)","(spoken)","(building)","(powerful)","(restrained)","(harmonies)","(echo)","(unison octave below)","(call and response)"]}
+];
+const SHAPES = [
+ {t:"Fragmented hook", b:"Hum hi\nto thay\nhum hi\nto thay…",
+  n:"Two syllables per line. Each line gets its own melodic slot, so the melody must invent contour instead of swallowing the phrase. Try uneven counts too — 2, 2, 2, 4 — so the last one has somewhere to sustain."},
+ {t:"Four-times repeat, one word changed", b:"[Chorus]\nHum hi to thay\nHum hi to thay\nHum hi to thay\nHum hi to hain",
+  n:"Write it out physically — (x2) gets ignored. Suno locks one melody across all four, so the changed word on the last pass lands as a payoff."},
+ {t:"Inter-line alaap", b:"[Pre-Chorus]\n…last line of the verse\n\naaaa….\n\n[Chorus]",
+  n:"On its own line with a blank line either side. Strongest before the first verse or right before the final chorus. One or two per song — it's the device most likely to pull the tonality if overused."},
+ {t:"Delivery arc", b:"[Verse]\n(softly)\n…\n\n[Final Chorus]\n(powerful) (harmonies)\n…",
+  n:"Gets the dynamic build back now that the style box carries no vocal descriptors at all."},
+ {t:"Alternating-length earworm", b:"Line of seven syllables\nLine of four\nLine of seven syllables\nLine of four",
+  n:"All odd lines one length, all even lines another, odd ≠ even. Forces a contour the four-bar default can't produce."}
+];
+
+/* ============================ RENDER ============================ */
+const src = document.getElementById("src");
+let hyphOn = false;
+try { hyphOn = localStorage.getItem("lyricWorkbench.hyph") === "1"; } catch(e){}
+const KEY = "lyricWorkbench.v1";
+let storageOK = true;
+try { const v = localStorage.getItem(KEY); if (v) src.value = v; } catch(e){ storageOK = false; }
+
+function esc(t){ return t.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+function analyse(){
+  const raw = src.value;
+  try { if (storageOK) localStorage.setItem(KEY, raw); } catch(e){ storageOK = false; }
+  document.getElementById("savenote").textContent = (storageOK ? "Saves on this device" : "Saving unavailable here") + (hyphOn ? " \u00b7 hyphens shown below + applied on copy" : "");
+
+  const lines = raw.split("\n");
+  const box = document.getElementById("lines");
+  box.innerHTML = "";
+  const counts = [];
+  let maxSyl = 1;
+  lines.forEach(l => { if (l.trim() && !/^\[.*\]$/.test(l.trim()) && !/^\(.*\)$/.test(l.trim())) maxSyl = Math.max(maxSyl, lineSyllables(l)); });
+
+  lines.forEach((line) => {
+    const t = line.trim();
+    const row = document.createElement("div");
+    if (!t) { row.className = "ln blank"; box.appendChild(row); return; }
+    if (/^\[.*\]$/.test(t) || /^\(.*\)$/.test(t)) {
+      row.className = "ln sect";
+      row.innerHTML = '<div></div><div class="sectlabel">' + esc(t) + '</div><div></div>';
+      box.appendChild(row); return;
+    }
+    row.className = "ln";
+    const n = lineSyllables(t);
+    counts.push(n);
+    const f = flags(t);
+    const h = holdability(t);
+
+    let shown = esc(hyphOn ? hyphenateLine(t) : t);
+    f.hitsR.forEach(w => { shown = shown.replace(new RegExp("\\b"+w+"\\b","ig"), m => "<em>"+m+"</em>"); });
+    f.hitsO.forEach(w => { shown = shown.replace(new RegExp("\\b"+w+"\\b","ig"), m => "<b>"+m+"</b>"); });
+
+    const tags = [];
+    if (h) tags.push('<span class="t '+h.grade+'" title="'+h.why+'">'+h.label+'</span>');
+    f.out.forEach(x => tags.push('<span class="t '+x.cls+'" title="'+x.why.replace(/"/g,"&quot;")+'">'+x.t+'</span>'));
+
+    row.innerHTML =
+      '<div class="syl">'+n+'</div>' +
+      '<div><div class="txt">'+shown+'</div><div class="bar" style="width:'+Math.round(n/maxSyl*100)+'%"></div></div>' +
+      '<div class="tags">'+tags.join("")+'</div>';
+    box.appendChild(row);
+  });
+
+  /* summary */
+  const uniq = [...new Set(counts)].sort((a,b)=>a-b);
+  const spread = counts.length ? (Math.max(...counts) - Math.min(...counts)) : 0;
+  const avg = counts.length ? (counts.reduce((a,b)=>a+b,0)/counts.length).toFixed(1) : "—";
+  const S = document.getElementById("summary");
+  S.innerHTML =
+    card("Sung lines", counts.length) +
+    card("Avg syllables", avg) +
+    card("Range", counts.length ? Math.min(...counts)+"–"+Math.max(...counts) : "—") +
+    card("Spread", spread + (spread <= 1 ? " · flat" : spread >= 4 ? " · good" : " · some"), spread<=1) +
+    card("Lengths used", uniq.join(", ") || "—", false, true);
+
+  renderChecks(raw, lines, counts);
+}
+function card(k,v,warn,small){
+  return '<div class="card"><span class="k">'+k+'</span><span class="v'+(small?" small":"")+'" '+
+    (warn?'style="color:var(--red)"':'')+'>'+v+'</span></div>';
+}
+
+function renderChecks(raw, lines, counts){
+  const body = lines.map(l=>l.trim());
+  const sung = body.filter(l => l && !/^\[.*\]$/.test(l) && !/^\(.*\)$/.test(l));
+  const has = [];
+
+  // 4x consecutive repeat
+  let rep4 = false;
+  for (let i=0;i+3<sung.length;i++){
+    const a = sung[i].toLowerCase();
+    if ([1,2,3].every(k => sung[i+k].toLowerCase() === a)) rep4 = true;
+  }
+  // 3 identical + 1 variant
+  let rep3v = false;
+  for (let i=0;i+3<sung.length;i++){
+    const a = sung[i].toLowerCase();
+    if (sung[i+1].toLowerCase()===a && sung[i+2].toLowerCase()===a && sung[i+3].toLowerCase()!==a) rep3v = true;
+  }
+  const alaap = body.some(l => /^[aeiouh]{3,}[….]*$/i.test(l.replace(/\s/g,"")));
+  const ellip = sung.some(l => /…|\.\.\./.test(l));
+  const frag  = counts.filter(n => n>0 && n<=3).length >= 3;
+  const sect  = body.some(l => /^\[.*\]$/.test(l));
+  const cues  = body.some(l => /\(.*\)/.test(l));
+  const spread = counts.length ? (Math.max(...counts) - Math.min(...counts)) : 0;
+
+  // holdable qafiya on the last line of each stanza
+  let stanzaEnds = [], run = [];
+  lines.forEach(l => {
+    const t = l.trim();
+    if (!t || /^\[.*\]$/.test(t)) { if (run.length) { stanzaEnds.push(run[run.length-1]); run=[]; } }
+    else run.push(t);
+  });
+  if (run.length) stanzaEnds.push(run[run.length-1]);
+  const badEnds = stanzaEnds.filter(l => { const h = holdability(l); return h && h.grade === "stop"; });
+
+  has.push([rep4 || rep3v, "Final chorus line repeated four times",
+    rep3v ? "Found three identical plus a variant — the strongest form." :
+    rep4 ? "Found. Try changing one word on the fourth pass so it lands as a payoff." :
+    "Write the line out four times physically. (x2) and (repeat) get ignored."]);
+  has.push([frag, "Hook fragmented into short lines",
+    frag ? "Found short lines. Uneven counts — 2, 2, 2, 4 — work better than four equal ones." :
+    "Split the hook across 2-syllable lines. Each line gets its own melodic slot."]);
+  has.push([alaap, "Alaap line (aaaa….) on its own",
+    alaap ? "Found. One or two per song — more starts pulling the tonality." :
+    "Put aaaa…. on its own line with blank lines either side, before the first verse or the final chorus."]);
+  has.push([ellip, "Ellipsis on a held line",
+    ellip ? "Found. Check it sits on an open-vowel qafiya so the note can actually ring." :
+    "An ellipsis at a line end makes Suno sustain and bend that syllable."]);
+  has.push([spread >= 3, "Asymmetric line lengths",
+    spread >= 3 ? "Good spread — the melody can't fall into the four-bar default." :
+    "Lines are close in length. A four-syllable line answered by a nine will force a contour."]);
+  has.push([badEnds.length === 0, "Stanza-final qafiya can be held",
+    badEnds.length ? badEnds.length + " stanza(s) end on a stopped consonant: \u201C" + badEnds[0].slice(-24) + "\u201D" :
+    "Every stanza closes on something you can sustain."]);
+  has.push([sect, "Section markers present",
+    sect ? "Found." : "Add [Verse] / [Chorus] on their own lines so Suno knows the structure."]);
+  has.push([cues, "Delivery cues present",
+    cues ? "Found." : "(softly) on verse one, (powerful) (harmonies) on the last chorus gives you the arc without global vocal tags."]);
+
+  document.getElementById("checks").innerHTML = has.map(([ok,lab,hint]) =>
+    '<div class="chk '+(ok?"yes":"no")+'"><div class="mark">'+(ok?"✓":"○")+'</div>'+
+    '<div><div class="lab">'+lab+'</div><div class="hint">'+hint+'</div></div></div>').join("");
+}
+
+/* word bank */
+const fieldSel = document.getElementById("fieldSel");
+Object.keys(FIELDS).forEach(k => { const o=document.createElement("option"); o.value=k; o.textContent=k; fieldSel.appendChild(o); });
+function renderBank(){
+  const wrap = document.getElementById("bankwrap");
+  wrap.innerHTML = "";
+  const k = fieldSel.value;
+  const d = document.createElement("div"); d.className = "chips";
+  FIELDS[k].forEach(w => {
+    const b=document.createElement("button"); b.className="chip"; b.type="button"; b.textContent=w;
+    b.addEventListener("click",()=>{ copy(w); b.classList.add("copied"); setTimeout(()=>b.classList.remove("copied"),900); });
+    d.appendChild(b);
+  });
+  wrap.appendChild(d);
+}
+fieldSel.addEventListener("change", renderBank);
+renderBank();
+
+/* structure tab */
+const sw = document.getElementById("snipwrap");
+SNIPS.forEach(g=>{
+  const sec=document.createElement("div"); sec.className="bank";
+  sec.innerHTML='<span class="silk">'+g.label+'</span>';
+  const d=document.createElement("div"); d.className="chips";
+  g.items.forEach(it=>{
+    const b=document.createElement("button"); b.className="chip"; b.type="button"; b.textContent=it;
+    b.addEventListener("click",()=>{ insert(it); b.classList.add("copied"); setTimeout(()=>b.classList.remove("copied"),900); });
+    d.appendChild(b);
+  });
+  sec.appendChild(d); sw.appendChild(sec);
+});
+SHAPES.forEach(r=>{
+  const d=document.createElement("div"); d.className="card"; d.style.marginTop="10px"; d.style.borderLeft="3px solid var(--amber)";
+  d.innerHTML='<span class="k" style="color:var(--amber)">'+r.t+'</span>'+
+    '<pre style="font-family:\'JetBrains Mono\',monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;margin:6px 0 8px">'+esc(r.b)+'</pre>'+
+    '<div class="hint" style="font-size:12.5px;color:var(--silk-dim)">'+r.n+'</div>';
+  d.style.cursor="pointer"; d.title="Tap to insert";
+  d.addEventListener("click",()=>insert(r.b));
+  sw.appendChild(d);
+});
+
+function insert(t){
+  const p = src.selectionStart ?? src.value.length;
+  src.value = src.value.slice(0,p) + t + "\n" + src.value.slice(p);
+  src.focus(); src.selectionStart = src.selectionEnd = p + t.length + 1;
+  analyse();
+}
+function copy(t){
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).catch(()=>fb(t));
+  else fb(t);
+}
+function fb(t){ const a=document.createElement("textarea"); a.value=t; a.style.position="fixed"; a.style.opacity="0";
+  document.body.appendChild(a); a.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(a); }
+
+let preApply = null;                      // snapshot of the sheet before hyphens were baked in
+const applyBtn = document.getElementById("applyBtn");
+const undoBtn  = document.getElementById("undoBtn");
+function paintApply(){
+  undoBtn.style.display = preApply === null ? "none" : "";
+  applyBtn.textContent  = preApply === null ? "Apply to sheet" : "Re-apply";
+}
+applyBtn.addEventListener("click", () => {
+  if (!src.value.trim()) return;
+  if (preApply === null) preApply = src.value;
+  src.value = hyphenateText(src.value);
+  try { localStorage.setItem("lyricWorkbench.pre", preApply); } catch(e){}
+  paintApply(); analyse();
+});
+undoBtn.addEventListener("click", () => {
+  if (preApply === null) return;
+  src.value = preApply;
+  preApply = null;
+  try { localStorage.removeItem("lyricWorkbench.pre"); } catch(e){}
+  paintApply(); analyse();
+});
+try { const pv = localStorage.getItem("lyricWorkbench.pre"); if (pv !== null) preApply = pv; } catch(e){}
+paintApply();
+
+const hyphBtn = document.getElementById("hyphBtn");
+hyphBtn.setAttribute("aria-pressed", hyphOn ? "true" : "false");
+hyphBtn.addEventListener("click", () => {
+  hyphOn = !hyphOn;
+  hyphBtn.setAttribute("aria-pressed", hyphOn ? "true" : "false");
+  try { localStorage.setItem("lyricWorkbench.hyph", hyphOn ? "1" : "0"); } catch(e){}
+  analyse();
+});
+
+document.getElementById("copyOut").addEventListener("click", e => {
+  copy(hyphOn ? hyphenateText(src.value) : src.value);
+  const o=e.target.textContent; e.target.textContent="Copied"; e.target.classList.add("ok");
+  setTimeout(()=>{e.target.textContent=o;e.target.classList.remove("ok");},1100);
+});
+document.getElementById("clearBtn").addEventListener("click", () => {
+  if (!src.value || confirm("Clear the lyric sheet?")) { src.value=""; try{localStorage.removeItem(KEY);}catch(e){} analyse(); }
+});
+
+const panels={lines:"p-lines",checks:"p-checks",bank:"p-bank",snip:"p-snip"};
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
+  t.setAttribute("aria-selected","true");
+  Object.values(panels).forEach(p=>document.getElementById(p).classList.add("hidden"));
+  document.getElementById(panels[t.dataset.tab]).classList.remove("hidden");
+}));
+
+src.addEventListener("input", analyse);
+analyse();
+</script>
+</body>
+</html>
