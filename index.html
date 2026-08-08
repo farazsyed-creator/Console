@@ -237,6 +237,22 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
   border-radius:3px;padding:14px;margin-top:10px;max-width:62ch;
 }
 .savedhd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:20px}
+.presetwrap{
+  background:var(--panel);border:1px solid var(--edge);
+  border-left:3px solid var(--red);border-radius:3px;
+  padding:11px 12px 13px;margin-top:16px;
+}
+.presetwrap .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.presetwrap .note{font-size:11px;color:var(--silk-dim);font-style:italic}
+.preset{
+  font-family:'Barlow','Helvetica Neue',sans-serif;font-size:12.5px;
+  background:var(--panel-lo);color:var(--cream);
+  border:1px solid var(--edge);border-radius:14px;
+  padding:6px 12px;cursor:pointer;transition:all .13s;
+}
+.preset:hover{border-color:var(--red);color:#fff}
+.preset:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.preset.loaded{background:var(--red);border-color:var(--red);color:#fff}
 .hidden{display:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:520px){
@@ -287,6 +303,10 @@ select:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 
   <!-- ================= STYLE ================= -->
   <section id="panel-style">
+    <div class="presetwrap">
+      <div class="hd"><span class="silk">Presets</span><span class="note">tap to load, then edit any lever</span></div>
+      <div class="chips" id="presetbar"></div>
+    </div>
     <div class="grid" id="modgrid"></div>
   </section>
 
@@ -1031,6 +1051,129 @@ document.getElementById("randomise").addEventListener("click", () => {
   });
   syncUI();
   render();
+});
+
+/* ---- presets ---- */
+const PRESETS = [
+ { n:"In Rainbows", s:{ anchor:"In Rainbows Era Radiohead Ballad", opening:"Opening On Solo Fingerpicked Acoustic Guitar",
+   drums:"Brushed Kit Entering Late And Loosely", feel:"Loping Swung Groove",
+   texture:"Fingerpicked Open Tuned Acoustic Guitar And Warm Piano Interplay", counter:"Solo Cello Counter-Melody",
+   bass:"Round Warm Fuzz Bass Mixed Forward", prod:"Warm Analog Production", tempo:"78 BPM",
+   struct:["No Gaps Between Vocal Lines","Long Sustained Notes Held Across Bar Lines"], mood:["Melancholic And Cinematic"] }},
+
+ { n:"OK Computer", s:{ anchor:"OK Computer Era Radiohead Ballad", opening:"Opening On Solo Minor Piano Ostinato",
+   drums:"Brushed Kit Entering Late And Loosely", texture:"Warm Piano And Clean Electric Guitar Interplay",
+   counter:"Glockenspiel Counter-Melody", bass:"Round Warm Fuzz Bass Mixed Forward",
+   prod:"Warm Analog Production", tempo:"76 BPM",
+   struct:["No Gaps Between Vocal Lines","Strings Swelling Through The Final Chorus"], mood:["Melancholic And Cinematic"] }},
+
+ { n:"Reznor film score", s:{ anchor:"Reznor And Ross Film Score Style", opening:"Opening On A Solo Analog Sequence With No Piano",
+   arch:"Arpeggiated Analog Sequence Beneath Long Sustained Notes", drums:"Steady Understated Pulse Underneath",
+   texture:"Mellotron And Bowed Vibraphone Processed Through Tape Degradation", counter:"Bass Clarinet Counter-Melody",
+   bass:"Distorted Sub Bass Pulse", synthpat:"Alessandro Cortini Modular Synth Textures", prod:"Cold Digital Reverb",
+   struct:["No Gaps Between Vocal Lines","Melodic Economy Few Notes Held Long"], mood:["Yearning And Cathartic"] }},
+
+ { n:"Viva La Vida", s:{ anchor:"Coldplay Viva La Vida Era", arch:"Driving Repeating String Ostinato Running Throughout",
+   drums:"Full Drum Kit Playing From The First Bar", feel:"Straight Eighth Note Feel, Driving",
+   perc:["Tubular Bells And Timpani"], synthpat:"Short Repeating Synth Hook Line Returning Between Every Vocal Phrase",
+   bass:"Deep Round Sub Bass", prod:"Brian Eno Production", tempo:"96 BPM",
+   struct:["Short Repeating Hook Returning Between Every Vocal Phrase","Massed Unison Vocal Chorus","Builds In Density Not Vocal Intensity"],
+   mood:["Triumphant And Yearning"] }},
+
+ { n:"Stromae ballad", s:{ anchor:"Stromae Formidable Style Melancholic Chanson Ballad", opening:"Opening On Solo Accordion",
+   arch:"Sparse Minimal Arrangement With Very Few Elements Each Distinct", drums:"Brushed Kit Entering Late And Loosely",
+   feel:"Heavily Swung Sixteenth Note Feel", counter:"Accordion Counter-Melody", bass:"Deep Round Sub Bass", tempo:"78 BPM",
+   struct:["Repetitive Earworm Hook Repeating Throughout","Melodic Economy Few Notes Held Long"], mood:["Wounded Tender And Cinematic"] }},
+
+ { n:"Vintage soul", s:{ anchor:"Vintage Soul Ballad With Modern Adult Contemporary Production", opening:"Opening On Solo Wurlitzer",
+   arch:"Full Band Playing Together From The First Verse Not Sparse", drums:"In The Pocket Soul Drumming With Ghost Notes",
+   feel:"Heavily Swung Sixteenth Note Feel", perc:["Tambourine On The Backbeat"],
+   bass:"Motown Style Syncopated Melodic Bass Carrying Its Own Counter-Melody, Leaving Space Between Phrases",
+   texture:"Hammond Organ And Tremolo Guitar", counter:"Horn Section Stabs Answering Every Vocal Line", tempo:"84 BPM",
+   struct:["Layered Vocal Doubles In Unison And Octaves","Memorable Repeating Chorus Hook"], mood:["Warm Joyful And Tender"] }},
+
+ { n:"Amnesiac cross-rhythm", s:{ anchor:"Amnesiac Era Radiohead", opening:"Opening On Solo Minor Piano Ostinato",
+   arch:"Repeating Piano Ostinato Growing Across The Song", poly:["Three Against Four Cross-Rhythm"],
+   drums:"Loose Jazz Drumming With Ghost Notes And Mallets", bass:"Upright Bass Walking Stepwise",
+   counter:"Ondes Martenot Floating Above", prod:"Nigel Godrich Production", tempo:"92 BPM",
+   mood:["Relentless Hypnotic And Tense"] }},
+
+ { n:"Unsettling titles", s:{ anchor:"Unsettling Film Title Sequence Score", opening:"Opening On Solo Chamber Organ",
+   arch:"Repeating Arpeggiated Ostinato Running Continuously Underneath",
+   texture:"Chamber Organ And Celesta Processed Through Tape Degradation", counter:"Musical Saw Counter-Melody",
+   perc:["Tubular Bells And Timpani","Prepared Piano Strikes As Percussion"], drums:"Steady Understated Pulse Underneath",
+   prod:"Cold Digital Reverb", tempo:"88 BPM", mood:["Eerie Beautiful And Ominous"] }},
+
+ { n:"Despacito upbeat", s:{ anchor:"Luis Fonsi Despacito Style Latin Pop", opening:"Opening On A Plucked String Riff",
+   drums:"Dembow Reggaeton Groove", poly:["Tresillo Three Three Two Pattern"], perc:["Congas And Bongos","Handclap Layer"],
+   bass:"Deep Round Sub Bass", texture:"Nylon String Guitar And Rhodes Interplay", tempo:"90 BPM",
+   struct:["Short Repeating Hook Returning Between Every Vocal Phrase","Massed Unison Vocal Chorus"], mood:["Sad Song You Can Dance To"] }},
+
+ { n:"Austere groove", s:{ anchor:"Austere Minimal Minor Key Groove", opening:"Opening On Drums Alone For The Intro Then Bass Enters",
+   arch:"Very Few Distinct Elements Nothing Extra", drums:"Machine Tight Four On The Floor With A Hard Cracking Snare On Two And Four",
+   feel:"Machine Tight, Everything Locked To The Grid", poly:["Syncopated Vocal Entries Starting Off The Downbeat"],
+   bass:"Syncopated Melodic Bass Ostinato Repeating Unchanged Every Bar As The Main Hook", synthtone:"Warm Analog Juno Pad",
+   prod:"Huge Reverb On Instruments, Dry Vocal", tempo:"117 BPM", mood:["Relentless Hypnotic And Tense"] }},
+
+ { n:"Amore crossover", s:{ anchor:"Andrea Bocelli Amore Era Latin Romantic Ballad", opening:"Opening On A Plucked String Riff",
+   arch:"Full Band Playing Together From The First Verse Not Sparse", drums:"Brushed Kit Entering Late And Loosely",
+   perc:["Congas And Bongos"], bass:"Upright Bass Walking Stepwise",
+   counter:"Solo Violin Carrying A Counter-Melody Over Sustained Strings", prod:"David Foster Production", tempo:"78 BPM",
+   struct:["Long Sustained Notes Held Across Bar Lines","Strings Swelling Through The Final Chorus"], mood:["Warm Nostalgic And Tender"] }},
+
+ { n:"Boards of Canada", s:{ anchor:"Boards Of Canada Music Has The Right To Children Era",
+   arch:"Minimalist Repeating Cells Accumulating", drums:"Heavy Boom Bap Drum Groove With Huge Room Reverb",
+   synthtone:"Mellotron Tape Flutes And Choir", synthpat:"Analog Synth Drone Swelling And Receding",
+   bass:"Deep Round Sub Bass", prod:"Tape Degraded Textures And Vinyl Crackle", tempo:"84 BPM",
+   mood:["Warm Nostalgic And Tender"] }},
+
+ { n:"Talk Talk", s:{ anchor:"Talk Talk Spirit Of Eden Era", opening:"Opening On Solo Chamber Organ",
+   arch:"Instruments Entering One At A Time", drums:"Brushed Kit Entering Late And Loosely",
+   texture:"Hammond Organ And Tremolo Guitar", counter:"Muted Trumpet Counter-Melody",
+   bass:"Upright Bass Walking Stepwise", prod:"Raw Live Room Production", tempo:"76 BPM", mood:["Hushed And Devotional"] }},
+
+ { n:"Cliff Martinez", s:{ anchor:"Cliff Martinez Solaris And Drive Era Film Score Style", opening:"Opening On Solo Marimba",
+   arch:"Repeating Arpeggiated Ostinato Running Continuously Underneath", synthpat:"Cascading Arpeggio With Slow Filter Sweep",
+   synthtone:"Warm Analog Juno Pad", drums:"Steady Understated Pulse Underneath", bass:"Deep Round Sub Bass",
+   prod:"Wide Warm Plate Reverb", tempo:"88 BPM", mood:["Awestruck And Uplifting"] }},
+
+ { n:"Clint Mansell", s:{ anchor:"Clint Mansell The Fountain Era Film Score Style", opening:"Opening On Solo Minor Piano Ostinato",
+   arch:"Repeating Piano Ostinato Growing Across The Song", counter:"Solo Cello Counter-Melody",
+   drums:"Steady Understated Pulse Underneath", bass:"Deep Round Sub Bass", tempo:"76 BPM",
+   struct:["Builds In Density Not Vocal Intensity","Melodic Economy Few Notes Held Long"], mood:["Yearning And Cathartic"] }},
+
+ { n:"Tame Impala (de-hazed)", s:{ anchor:"Tame Impala Currents Era Psychedelic Synth Pop",
+   drums:"Punchy Dry Close-Mic Drums Against Wet Instruments", feel:"In The Pocket, Laid Back Behind The Beat",
+   bass:"Round Warm Fuzz Bass Mixed Forward", synthtone:"Warm Analog Juno Pad", prod:"Warm Analog Production",
+   tempo:"92 BPM", struct:["Memorable Repeating Chorus Hook"], mood:["Bittersweet And Warm"] }},
+
+ { n:"Rag'n'Bone soul", s:{ anchor:"Rag'n'Bone Man Human Era Blues Soul", opening:"Opening On Solo Handclaps And Stomps",
+   drums:"Heavy Boom Bap Drum Groove With Huge Room Reverb", perc:["Stomps And Finger Snaps","Handclap Layer"],
+   bass:"Deep Round Sub Bass", texture:"Hammond Organ And Tremolo Guitar", counter:"Guitar Fill Answering Each Vocal Line",
+   tempo:"88 BPM", struct:["Massed Unison Vocal Chorus","Melodic Economy Few Notes Held Long"], mood:["Raw Soulful And Cathartic"] }}
+];
+
+function applyPreset(pre){
+  MODULES.forEach(m => {
+    if (m.id === "exclude") return;              // keep the user's exclusions
+    const v = pre.s[m.id];
+    if (m.type === "chips") state[m.id] = Array.isArray(v) ? v.slice() : [];
+    else state[m.id] = typeof v === "string" ? v : "";
+  });
+  syncUI(); render();
+}
+
+const pbar = document.getElementById("presetbar");
+PRESETS.forEach(pre => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "preset"; b.textContent = pre.n;
+  b.addEventListener("click", () => {
+    applyPreset(pre);
+    document.querySelectorAll(".preset").forEach(x => x.classList.remove("loaded"));
+    b.classList.add("loaded");
+    window.scrollTo({ top:0, behavior:"smooth" });
+  });
+  pbar.appendChild(b);
 });
 
 /* tabs */
