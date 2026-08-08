@@ -117,6 +117,9 @@ button.act:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 button.act.primary{background:var(--red);border-color:var(--red);color:#fff}
 button.act.primary:hover{background:#F26640}
 button.act.ok{background:var(--green);border-color:var(--green);color:#12261A}
+button.act.suno{background:#111;border-color:#111;color:#fff}
+button.act.suno:hover{background:#222}
+
 .sepgroup{display:inline-flex;gap:0}
 .sepgroup .act{border-radius:0;border-right-width:0}
 .sepgroup .act:first-child{border-radius:2px 0 0 2px}
@@ -315,6 +318,7 @@ textarea:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
     </div>
     <div class="btnrow">
       <button class="act primary" id="copyStyle">Copy style box</button>
+      <button class="act suno" id="toSuno">Copy &amp; open Suno</button>
       <button class="act" id="restoreBtn" style="display:none">Reset to preset</button>
       <button class="act" id="detachBtn" style="display:none">Drop preset</button>
       <span class="sepgroup" id="sepGroup" role="group" aria-label="Separator">
@@ -472,6 +476,49 @@ const MODULES = [
     "Full Band Playing Together From The First Verse Not Sparse",
     "Very Few Distinct Elements Nothing Extra",
     "Instruments Entering One At A Time"
+  ]},
+
+  { id:"delivery", label:"Vocal delivery", note:"rotate — don't fix one", type:"chips", opts:[
+    "Melancholic Delivery",
+    "Intimate Conversational Delivery",
+    "Warm Projected Delivery",
+    "Restrained Unhurried Delivery",
+    "Upbeat Joyful Delivery",
+    "Hushed Devotional Delivery",
+    "Raw Emotional Pleading",
+    "Tender Vulnerable Delivery",
+    "Deadpan Flat Delivery",
+    "Urgent Driving Delivery",
+    "Wistful Nostalgic Delivery",
+    "Playful Light Delivery",
+    "Weary Resigned Delivery",
+    "Defiant Anthemic Delivery",
+    "Sensual Languid Delivery",
+    "Storytelling Delivery With Clear Diction",
+    "Long Sustained Legato Phrasing",
+    "Syllabic Rhythmic Delivery",
+    "Laid Back Behind The Beat Phrasing",
+    "Syncopated Vocal Entries Off The Downbeat",
+    "Melodic Economy Few Notes Held Long",
+    "Extended Vocal Improvisation"
+  ]},
+
+  { id:"vplace", label:"Vocal placement", note:"how it sits in the mix", type:"select", opts:[
+    "Dry Close-Mic Vocal",
+    "Close-Mic Whispered Vocal",
+    "Breathy Soft Unprojected Vocal",
+    "Clear Diction Vocal Forward In The Mix",
+    "Vocal Sitting Back In The Mix Drenched In Reverb",
+    "Vocal With Long Slapback Delay",
+    "Dry Vocal Against Wet Reverberant Instruments",
+    "Wide Doubled Vocal",
+    "Vocal Doubled An Octave Below",
+    "Massed Unison Vocal",
+    "Gospel Choir Backing In Unison And Octaves",
+    "Wordless Vocal Texture Used As An Instrument",
+    "Layered Vocalises",
+    "Close Second Vocal",
+    "Distant Processed Vocal Fragments Answering The Lead"
   ]},
 
   { id:"drums", label:"Drum kit", note:"score anchors kill kits", type:"select", opts:[
@@ -844,7 +891,7 @@ lockBox.className = "mod";
 lockBox.innerHTML =
   `<div class="hd"><span class="silk">Vocal</span><span class="note">locked</span></div>
    <div class="locked">Male Vocals</div>
-   <div class="note" style="margin-top:7px">Nothing else about the voice — no type, no range, no mic or delivery tags. Those flattened every song into the same one.</div>`;
+   <div class="note" style="margin-top:7px">No voice type, no range. Delivery and placement are separate levers below — use them, but rotate rather than fixing one on every song.</div>`;
 grid.insertBefore(lockBox, grid.firstChild);
 
 /* lyric snippets */
@@ -1224,6 +1271,13 @@ document.getElementById("favNow").addEventListener("click", e => {
 document.getElementById("clearHist").addEventListener("click", e => {
   history_ = []; writeList(HIST_KEY, history_); renderLists(); flash(e.target, "History cleared");
 });
+document.getElementById("toSuno").addEventListener("click", e => {
+  copy(assemble()); addHistory();
+  const o=e.target.textContent; e.target.textContent="Copied \u00b7 opening"; e.target.classList.add("ok");
+  setTimeout(()=>{ e.target.textContent=o; e.target.classList.remove("ok");
+    window.open("https://suno.com/create","_blank"); }, 350);
+});
+
 document.getElementById("copyExclude").addEventListener("click", e => {
   const x = excludeList();
   copy(x);
