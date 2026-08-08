@@ -117,6 +117,10 @@ button.act:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 button.act.primary{background:var(--red);border-color:var(--red);color:#fff}
 button.act.primary:hover{background:#F26640}
 button.act.ok{background:var(--green);border-color:var(--green);color:#12261A}
+.sepgroup{display:inline-flex;gap:0}
+.sepgroup .act{border-radius:0;border-right-width:0}
+.sepgroup .act:first-child{border-radius:2px 0 0 2px}
+.sepgroup .act:last-child{border-radius:0 2px 2px 0;border-right-width:1px}
 button.act[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#1B1508}
 
 /* ---------- tabs ---------- */
@@ -313,6 +317,11 @@ textarea:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
       <button class="act primary" id="copyStyle">Copy style box</button>
       <button class="act" id="restoreBtn" style="display:none">Reset to preset</button>
       <button class="act" id="detachBtn" style="display:none">Drop preset</button>
+      <span class="sepgroup" id="sepGroup" role="group" aria-label="Separator">
+        <button class="act sep" data-sep="comma" aria-pressed="true">, commas</button>
+        <button class="act sep" data-sep="space" aria-pressed="false">&nbsp; spaces</button>
+        <button class="act sep" data-sep="pipe" aria-pressed="false">| pipes</button>
+      </span>
       <button class="act" id="drumsFirstBtn" aria-pressed="false">Drums first</button>
       <button class="act" id="favNow">★ Favourite</button>
       <button class="act" id="copyExclude">Copy exclude list</button>
@@ -373,6 +382,7 @@ textarea:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
         <li><b>The first third of the prompt is what lands.</b> Anything you can't afford to lose goes early; mood adjectives are expendable tail.</li>
         <li><b>Small edits inside a working frame beat rebuilding.</b> Three times now the fix was one tag, and the rebuild made it worse.</li>
         <li><b>Film-score and ballad anchors suppress the drum kit</b>, and the anchor sits earlier in the prompt than the kit does, so it wins. Use the Drums first toggle to hoist the whole rhythm block ahead of the anchor.</li>
+        <li><b>Separators change how Suno reads the prompt.</b> Commas give it discrete items it samples independently; spaces let adjacent words fuse into compound descriptors. The two prompts that have worked best for you are the space-separated ones. Past roughly eight comma-separated elements, priority collapses and the output averages out.</li>
         <li><b>Exclusions belong in the Exclude Styles field</b>, not as negations inside the style box.</li>
         <li><b>v4.5 is inventive but ignores specifications. v5 obeys them.</b> Explore in 4.5, execute in 5.</li>
         <li><b>Heavy swing reads as happy.</b> For serious material use laid-back timing and ghost notes, and keep tambourine and handclaps out.</li>
@@ -877,6 +887,15 @@ RECIPES.forEach(r => {
 
 /* ============ RENDER ============ */
 let drumsFirst = false;
+let sepMode = "comma";
+function joinParts(parts){
+  if (sepMode === "space") {
+    // strip internal commas too, so nothing fuses across a stray punctuation mark
+    return parts.map(x => x.replace(/,/g, " ").replace(/\s{2,}/g, " ").trim()).join(" ");
+  }
+  if (sepMode === "pipe") return parts.join(" | ");
+  return parts.join(", ") + ".";
+}
 let baseTags = null;          // preset body as an editable tag list; levers append to it
 let baseName = "";
 Object.defineProperty(globalThis, "baseText", {
@@ -941,7 +960,7 @@ function assemble(){
       : MODULES;
     order.forEach(m => { if (m.id !== "exclude" && m.id !== "tempo") pushMod(parts, m); });
     state.__extra.split(",").map(x => x.trim()).filter(Boolean).forEach(x => parts.push(x));
-    return parts.join(", ") + ".";
+    return joinParts(parts);
   }
   const order = drumsFirst
     ? MODULES.filter(m => RHYTHM_IDS.includes(m.id)).concat(MODULES.filter(m => !RHYTHM_IDS.includes(m.id)))
@@ -953,7 +972,7 @@ function assemble(){
     }
     pushMod(parts, m);
   });
-  return parts.join(", ") + ".";
+  return joinParts(parts);
 }
 function excludeList(){ return state.exclude.join(", "); }
 
@@ -1175,6 +1194,18 @@ function flash(btn, word){
 }
 
 document.getElementById("copyStyle").addEventListener("click", e => { copy(assemble()); addHistory(); flash(e.target,"Copied"); });
+try { sepMode = localStorage.getItem("promptConsole.sep") || "comma"; } catch(e){}
+function paintSep(){
+  document.querySelectorAll(".sep").forEach(b =>
+    b.setAttribute("aria-pressed", b.dataset.sep === sepMode ? "true" : "false"));
+}
+document.querySelectorAll(".sep").forEach(b => b.addEventListener("click", () => {
+  sepMode = b.dataset.sep;
+  try { localStorage.setItem("promptConsole.sep", sepMode); } catch(e){}
+  paintSep(); render();
+}));
+paintSep();
+
 const dfBtn = document.getElementById("drumsFirstBtn");
 try { drumsFirst = localStorage.getItem("promptConsole.drumsFirst") === "1"; } catch(e){}
 dfBtn.setAttribute("aria-pressed", drumsFirst ? "true" : "false");
